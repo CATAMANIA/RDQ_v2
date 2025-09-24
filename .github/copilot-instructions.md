@@ -44,7 +44,46 @@ cd frontend
 npm install
 ```
 
+### JIRA Ticket Development Workflow
+For each JIRA ticket implementation, follow this standardized workflow:
+
+#### 1. Branch Creation
+- Create a new feature branch for each JIRA ticket: `feature/TM-XX`
+- Where `XX` corresponds to the JIRA ticket number (e.g., `feature/TM-33`, `feature/TM-49`)
+- Branch from `main` branch
+
+#### 2. Development Process
+- Implement the feature according to JIRA acceptance criteria
+- Commit code incrementally with meaningful commit messages
+- Push feature branch to GitHub repository
+
+#### 3. Pull Request Creation
+- Create Pull Request from feature branch to `main`
+- Include JIRA ticket reference in PR title and description
+- Link PR to corresponding JIRA ticket for traceability
+
+#### 4. JIRA Status Management
+- **Acceptance Criteria Validation**: Review all acceptance criteria defined in the JIRA ticket
+- **Status Update Rules**:
+  - ✅ **"Terminé"** (Done): All acceptance criteria are fully implemented and validated
+  - 🔄 **"En cours"** (In Progress): Partial implementation or acceptance criteria not yet met
+- Update JIRA ticket status based on completion assessment
+
 ### Key Commands
+
+#### Git Workflow for JIRA Tickets
+```bash
+# Create and switch to feature branch
+git checkout -b feature/TM-XX
+
+# Development cycle
+git add .
+git commit -m "feat(TM-XX): implement [feature description]"
+git push origin feature/TM-XX
+
+# Create Pull Request (via GitHub UI or CLI)
+gh pr create --title "TM-XX: [Ticket Title]" --body "Implements JIRA ticket TM-XX"
+```
 
 #### Backend (Java 21 + Spring)
 ```bash
