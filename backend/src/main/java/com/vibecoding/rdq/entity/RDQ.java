@@ -94,6 +94,10 @@ public class RDQ {
         this.idRdq = idRdq;
     }
 
+    public Long getId() {
+        return idRdq;
+    }
+
     public String getTitre() {
         return titre;
     }
