@@ -47,6 +47,8 @@ npm install
 ### JIRA Ticket Development Workflow
 For each JIRA ticket implementation, follow this standardized workflow:
 
+**⚠️ IMPORTANT**: Always use **MCP GitHub tools** for Pull Request and Issue operations instead of CLI commands.
+
 #### 1. Branch Creation
 - Create a new feature branch for each JIRA ticket: `feature/TM-XX`
 - Where `XX` corresponds to the JIRA ticket number (e.g., `feature/TM-33`, `feature/TM-49`)
@@ -58,7 +60,8 @@ For each JIRA ticket implementation, follow this standardized workflow:
 - Push feature branch to GitHub repository
 
 #### 3. Pull Request Creation
-- Create Pull Request from feature branch to `main`
+- **IMPORTANT**: Use MCP GitHub tools instead of CLI commands for PR operations
+- Create Pull Request from feature branch to `main` using MCP tools
 - Include JIRA ticket reference in PR title and description
 - Link PR to corresponding JIRA ticket for traceability
 
@@ -81,8 +84,9 @@ git add .
 git commit -m "feat(TM-XX): implement [feature description]"
 git push origin feature/TM-XX
 
-# Create Pull Request (via GitHub UI or CLI)
-gh pr create --title "TM-XX: [Ticket Title]" --body "Implements JIRA ticket TM-XX"
+# Create Pull Request using MCP GitHub tools (PREFERRED)
+# Use mcp_github_create_pull_request instead of CLI
+# Example: via MCP tools in VS Code
 ```
 
 #### Backend (Java 21 + Spring)
@@ -106,6 +110,60 @@ ng serve                        # Development server
 ng test                         # Run tests
 ng build                        # Production build
 ```
+
+### GitHub Integration via MCP Tools
+
+#### **CRITICAL: Use MCP Tools for GitHub Operations**
+When working with GitHub repositories, **ALWAYS use MCP GitHub tools** instead of CLI commands for the following operations:
+
+#### Pull Request Management (via MCP)
+```markdown
+✅ **PREFERRED**: Use MCP GitHub tools
+- mcp_github_create_pull_request
+- mcp_github_update_pull_request  
+- mcp_github_merge_pull_request
+- mcp_github_get_pull_request
+- mcp_github_list_pull_requests
+
+❌ **AVOID**: Direct CLI commands
+- gh pr create
+- gh pr merge
+- gh pr view
+```
+
+#### Issue Management (via MCP)
+```markdown
+✅ **PREFERRED**: Use MCP GitHub tools
+- mcp_github_create_issue
+- mcp_github_update_issue
+- mcp_github_get_issue
+- mcp_github_add_issue_comment
+
+❌ **AVOID**: Direct CLI commands  
+- gh issue create
+- gh issue comment
+```
+
+#### Repository Operations (via MCP)
+```markdown
+✅ **PREFERRED**: Use MCP GitHub tools for
+- Creating/updating files
+- Managing branches
+- Repository information
+- Workflow management
+
+⚠️ **Git CLI**: Still use for local operations
+- git add, git commit, git push
+- git checkout, git merge
+- git status, git log
+```
+
+#### Benefits of MCP GitHub Tools
+- **🔧 Integrated workflow**: Direct integration with VS Code environment
+- **📋 Structured data**: Consistent API responses and error handling  
+- **🎯 Context awareness**: Better integration with JIRA ticket workflow
+- **📚 Documentation**: Automatic documentation and traceability
+- **🔄 Reliability**: More robust than CLI for automated operations
 
 ## Code Conventions
 
