@@ -40,6 +40,11 @@ public class Manager {
     @OneToMany(mappedBy = "manager", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RDQ> rdqs = new ArrayList<>();
 
+    // Relation avec User pour l'authentification
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_user", unique = true)
+    private User user;
+
     // Constructors
     public Manager() {}
 
@@ -97,6 +102,14 @@ public class Manager {
 
     public void setRdqs(List<RDQ> rdqs) {
         this.rdqs = rdqs;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     // Helper methods

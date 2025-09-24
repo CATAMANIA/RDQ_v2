@@ -39,6 +39,11 @@ public class Collaborateur {
     @ManyToMany(mappedBy = "collaborateurs", fetch = FetchType.LAZY)
     private List<RDQ> rdqs = new ArrayList<>();
 
+    // Relation avec User pour l'authentification
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_user", unique = true)
+    private User user;
+
     // Constructors
     public Collaborateur() {}
 
@@ -96,6 +101,14 @@ public class Collaborateur {
 
     public void setRdqs(List<RDQ> rdqs) {
         this.rdqs = rdqs;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     // Helper methods
