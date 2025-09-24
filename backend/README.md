@@ -1,17 +1,17 @@
 # RDQ Backend - Initialisation Stack Technique
 
 ## Overview
-Ce backend Java 21 + Spring Boot 3.2 gère le système RDQ (Réunions de Démarrage) avec une architecture REST complète.
+Ce backend Java 21 + Spring Boot 3.4 LTS gère le système RDQ (Réunions de Démarrage) avec une architecture REST complète.
 
 ## Stack Technique
-- **Java**: 21 (LTS)
-- **Framework**: Spring Boot 3.2.1
+- **Java**: 21 (LTS) ✅ *Mis à jour (TM-50)*
+- **Framework**: Spring Boot 3.4.0 (LTS) ✅ *Mis à jour (TM-50)*
 - **Base de données**: PostgreSQL 15+ (H2 pour tests)
-- **ORM**: Hibernate/JPA
+- **ORM**: Hibernate/JPA (via Spring Boot 3.4)
 - **Build**: Maven 3.9+
-- **Migration DB**: Flyway
-- **Documentation API**: Swagger/OpenAPI 3
-- **Tests**: JUnit 5 + Mockito
+- **Migration DB**: Flyway 10.20+
+- **Documentation API**: Swagger/OpenAPI 3 (SpringDoc 2.7.0)
+- **Tests**: JUnit 5 + Mockito + TestContainers 1.20+
 
 ## Architecture
 
