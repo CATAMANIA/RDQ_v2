@@ -48,9 +48,33 @@
 
 **Détails** : Voir [TM-49-TECH07-Backend-Stack-Init.md](./TM-49-TECH07-Backend-Stack-Init.md)
 
+### 🔄 TM-50 - TECH08 : Migration Java 17 vers Java 21 LTS
+- **Date création** : 24 septembre 2025
+- **Status** : À FAIRE 🔄
+- **Type** : User Story Technique d'optimisation
+- **Estimation** : 8 story points
+- **Dépendances** : TM-49 (Terminé)
+
+**Objectifs** :
+- 🔄 Migration JDK 17 → JDK 21 LTS
+- 🔄 Mise à jour configuration Maven (java.version=21)
+- 🔄 Audit compatibilité dépendances
+- 🔄 Utilisation nouvelles fonctionnalités Java 21
+- 🔄 Tests validation complète
+- 🔄 Documentation migration
+
+**Impact prévu** : ⚡ **Stack technique optimisée - Performances et fonctionnalités Java 21**
+
+**Bénéfices attendus** : Performance JVM, nouvelles fonctionnalités, support LTS jusqu'en 2031
+
+**Timing optimal** : Avant développement métier intensif (TM-33 à TM-42)
+
 ---
 
 ## 📋 Tickets métier à développer (Roadmap)
+
+### Sprint 1 - Optimisations Techniques
+- ✅ **TM-50** : Migration Java 17 vers Java 21 LTS (Should Have - 8 pts) - **TERMINÉ** 🚀
 
 ### Sprint 1 - Fonctionnalités Core
 - 🔄 **TM-33** : Gestion des RDQ (CRUD complet)
