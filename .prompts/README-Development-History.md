@@ -74,7 +74,7 @@
 ## 📋 Tickets métier à développer (Roadmap)
 
 ### Sprint 1 - Optimisations Techniques
-- 🔄 **TM-50** : Migration Java 17 vers Java 21 LTS (Should Have - 8 pts)
+- ✅ **TM-50** : Migration Java 17 vers Java 21 LTS (Should Have - 8 pts) - **TERMINÉ** 🚀
 
 ### Sprint 1 - Fonctionnalités Core
 - 🔄 **TM-33** : Gestion des RDQ (CRUD complet)
