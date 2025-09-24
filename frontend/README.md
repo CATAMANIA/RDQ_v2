@@ -1,14 +1,11 @@
-# RDQ_v2 Frontend
 
-This directory contains the frontend application, initially built with React and planned to migrate to Angular LTS.
+  # RDQ Application Development
 
-## Current Status
-- [ ] React application setup
-- [ ] Angular migration planning
-- [ ] Testing setup with Jest
+  This is a code bundle for RDQ Application Development. The original project is available at https://www.figma.com/design/BNJK285VCXsjlu5kVAW2lm/RDQ-Application-Development.
 
-## Getting Started
-```bash
-npm install
-npm start
-```
+  ## Running the code
+
+  Run `npm i` to install the dependencies.
+
+  Run `npm run dev` to start the development server.
+  
