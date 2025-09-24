@@ -78,6 +78,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
                 
+                // Endpoints RDQ avec contrôle d'accès spécifique
+                .requestMatchers(HttpMethod.POST, "/api/v1/rdq").hasRole("MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/rdq/my-rdqs").hasRole("MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/rdq/my-assignments").hasRole("COLLABORATEUR")
+                .requestMatchers(HttpMethod.GET, "/api/v1/rdq/**").hasAnyRole("ADMIN", "MANAGER", "COLLABORATEUR")
+                
                 // API générale (accessible aux utilisateurs authentifiés)
                 .requestMatchers("/api/**").authenticated()
                 
