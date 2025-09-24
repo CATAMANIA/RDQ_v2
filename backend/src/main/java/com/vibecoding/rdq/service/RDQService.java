@@ -1,11 +1,13 @@
 package com.vibecoding.rdq.service;
 
 import com.vibecoding.rdq.dto.CreateRdqRequest;
+import com.vibecoding.rdq.dto.DocumentResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.Manager;
 import com.vibecoding.rdq.entity.Collaborateur;
 import com.vibecoding.rdq.entity.Projet;
+
 import com.vibecoding.rdq.repository.RDQRepository;
 import com.vibecoding.rdq.repository.ManagerRepository;
 import com.vibecoding.rdq.repository.CollaborateurRepository;
@@ -176,6 +178,25 @@ public class RDQService {
             .collect(Collectors.toList());
         response.setCollaborateurs(collaborateursInfo);
 
+        // Documents info
+        List<DocumentResponse> documentsInfo = rdq.getDocuments().stream()
+            .map(doc -> {
+                DocumentResponse docResponse = new DocumentResponse();
+                docResponse.setId(doc.getId());
+                docResponse.setNomFichier(doc.getNomFichier());
+                docResponse.setType(doc.getType() != null ? doc.getType().toString() : "AUTRE");
+                docResponse.setTailleFichier(doc.getTailleFichier());
+                docResponse.setMimeType(doc.getMimeType());
+                docResponse.setDateUpload(doc.getDateUpload());
+                docResponse.setUploadedBy(doc.getUploadedBy());
+                docResponse.setSharepointItemId(doc.getSharepointItemId());
+                docResponse.setSharepointDownloadUrl(doc.getSharepointDownloadUrl());
+                docResponse.setRdqId(rdq.getIdRdq());
+                return docResponse;
+            })
+            .collect(Collectors.toList());
+        response.setDocuments(documentsInfo);
+
         return response;
     }
 
@@ -226,7 +247,44 @@ public class RDQService {
      * Récupère les RDQ assignés à un collaborateur
      */
     public List<RdqResponse> findAssignmentsByCollaborateurId(Long collaborateurId) {
-        // Pour l'instant, retourne une liste vide - sera implémenté avec la relation Many-to-Many
-        return java.util.Collections.emptyList();
+        return rdqRepository.findByCollaborateurId(collaborateurId).stream()
+            .map(this::mapToRdqResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupère les RDQ assignés à un collaborateur avec filtrage par statut
+     */
+    public List<RdqResponse> findAssignmentsByCollaborateurIdAndStatut(Long collaborateurId, RDQ.StatutRDQ statut) {
+        List<RDQ> rdqs = rdqRepository.findByCollaborateurId(collaborateurId);
+        
+        if (statut != null) {
+            rdqs = rdqs.stream()
+                .filter(rdq -> rdq.getStatut() == statut)
+                .collect(Collectors.toList());
+        }
+        
+        return rdqs.stream()
+            .map(this::mapToRdqResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupère les RDQ assignés à un collaborateur avec option d'inclure l'historique
+     */
+    public List<RdqResponse> findAssignmentsByCollaborateurId(Long collaborateurId, boolean includeHistory) {
+        List<RDQ> rdqs = rdqRepository.findByCollaborateurId(collaborateurId);
+        
+        if (!includeHistory) {
+            // Filtre pour exclure les RDQ terminés et annulés
+            rdqs = rdqs.stream()
+                .filter(rdq -> rdq.getStatut() != RDQ.StatutRDQ.TERMINE && 
+                               rdq.getStatut() != RDQ.StatutRDQ.ANNULE)
+                .collect(Collectors.toList());
+        }
+        
+        return rdqs.stream()
+            .map(this::mapToRdqResponse)
+            .collect(Collectors.toList());
     }
 }

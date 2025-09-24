@@ -52,6 +52,9 @@ public class RdqResponse {
     @Schema(description = "Date de création du RDQ")
     private LocalDateTime dateCreation;
 
+    @Schema(description = "Liste des documents attachés au RDQ")
+    private List<DocumentResponse> documents;
+
     // Nested DTOs
     @Schema(description = "Informations du manager")
     public static class ManagerInfo {
@@ -235,6 +238,14 @@ public class RdqResponse {
 
     public void setDateCreation(LocalDateTime dateCreation) {
         this.dateCreation = dateCreation;
+    }
+
+    public List<DocumentResponse> getDocuments() {
+        return documents;
+    }
+
+    public void setDocuments(List<DocumentResponse> documents) {
+        this.documents = documents;
     }
 
     @Override

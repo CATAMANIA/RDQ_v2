@@ -2,6 +2,7 @@ package com.vibecoding.rdq.controller;
 
 import com.vibecoding.rdq.dto.CreateRdqRequest;
 import com.vibecoding.rdq.dto.RdqResponse;
+import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.User;
 import com.vibecoding.rdq.service.RDQService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -163,7 +164,7 @@ public class RdqApiController {
     @GetMapping("/my-assignments")
     @Operation(
         summary = "Récupérer les RDQ assignés au collaborateur",
-        description = "Récupère tous les RDQ assignés au collaborateur authentifié"
+        description = "Récupère tous les RDQ assignés au collaborateur authentifié avec options de filtrage"
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Liste des RDQ assignés récupérée"),
@@ -171,7 +172,12 @@ public class RdqApiController {
         @ApiResponse(responseCode = "403", description = "Accès refusé - Rôle COLLABORATEUR requis")
     })
     @PreAuthorize("hasRole('COLLABORATEUR')")
-    public ResponseEntity<?> getMyAssignments(@AuthenticationPrincipal User currentUser) {
+    public ResponseEntity<?> getMyAssignments(
+            @Parameter(description = "Inclure l'historique (RDQ terminés/annulés)") 
+            @RequestParam(required = false, defaultValue = "false") boolean includeHistory,
+            @Parameter(description = "Filtrer par statut") 
+            @RequestParam(required = false) String statut,
+            @AuthenticationPrincipal User currentUser) {
         
         Long collaborateurId = currentUser.getCollaborateur() != null ? 
             currentUser.getCollaborateur().getIdCollaborateur() : null;
@@ -181,14 +187,88 @@ public class RdqApiController {
                 .body(Map.of("error", "Utilisateur non associé à un profil collaborateur"));
         }
 
-        // TODO: Implémenter findRdqsByCollaborateurId dans le service
-        List<RdqResponse> rdqs = List.of(); // Placeholder
+        try {
+            List<RdqResponse> rdqs;
+            
+            if (statut != null && !statut.isEmpty()) {
+                // Filtrage par statut spécifique
+                RDQ.StatutRDQ statutEnum = RDQ.StatutRDQ.valueOf(statut.toUpperCase());
+                rdqs = rdqService.findAssignmentsByCollaborateurIdAndStatut(collaborateurId, statutEnum);
+            } else {
+                // Filtrage avec ou sans historique
+                rdqs = rdqService.findAssignmentsByCollaborateurId(collaborateurId, includeHistory);
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", rdqs,
+                "count", rdqs.size(),
+                "filters", Map.of(
+                    "includeHistory", includeHistory,
+                    "statut", statut != null ? statut : "all"
+                )
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "success", false,
+                    "error", "Statut invalide. Valeurs autorisées: PLANIFIE, EN_COURS, TERMINE, ANNULE"
+                ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false,
+                    "error", "Erreur lors de la récupération des RDQ"
+                ));
+        }
+    }
+
+    /**
+     * Récupérer les documents d'un RDQ
+     */
+    @GetMapping("/{id}/documents")
+    @Operation(
+        summary = "Récupérer les documents d'un RDQ",
+        description = "Récupère la liste des documents attachés à un RDQ"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Liste des documents récupérée"),
+        @ApiResponse(responseCode = "401", description = "Non authentifié"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé"),
+        @ApiResponse(responseCode = "403", description = "Accès non autorisé")
+    })
+    @PreAuthorize("hasRole('MANAGER') or hasRole('COLLABORATEUR')")
+    public ResponseEntity<?> getRdqDocuments(
+            @Parameter(description = "ID du RDQ") @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
         
-        return ResponseEntity.ok(Map.of(
-            "success", true,
-            "data", rdqs,
-            "count", rdqs.size()
-        ));
+        try {
+            Optional<RdqResponse> rdqResponse = rdqService.findRdqById(id);
+            
+            if (rdqResponse.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "RDQ non trouvé avec l'ID: " + id
+                    ));
+            }
+
+            // TODO: Vérifier les droits d'accès (collaborateur assigné ou manager propriétaire)
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", rdqResponse.get().getDocuments() != null ? rdqResponse.get().getDocuments() : List.of(),
+                "count", rdqResponse.get().getDocuments() != null ? rdqResponse.get().getDocuments().size() : 0
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false,
+                    "error", "Erreur lors de la récupération des documents"
+                ));
+        }
     }
 
     /**

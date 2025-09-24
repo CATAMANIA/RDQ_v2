@@ -39,26 +39,47 @@ export interface Bilan {
   dateCreation: Date;
 }
 
-export interface RDQ {
-  idRDQ: number;
-  titre: string;
-  dateHeure: Date;
-  adresse?: string;
-  mode: 'physique' | 'visio';
-  indicationsManager?: string;
-  statut: 'en_cours' | 'clos';
+export interface ManagerInfo {
   idManager: number;
+  nom: string;
+  email: string;
+}
+
+export interface ProjetInfo {
+  idProjet: number;
+  nom: string;
+  client?: string;
+}
+
+export interface CollaborateurInfo {
   idCollaborateur: number;
-  idClient: number;
+  nom: string;
+  email: string;
+}
+
+export interface RDQ {
+  idRdq: number;
+  titre: string;
+  dateHeure: string; // ISO string from API
+  adresse?: string;
+  mode: 'PRESENTIEL' | 'DISTANCIEL' | 'HYBRIDE';
+  statut?: 'PLANIFIE' | 'EN_COURS' | 'TERMINE' | 'ANNULE';
+  description?: string;
+  manager?: ManagerInfo;
+  projet?: ProjetInfo;
+  collaborateurs?: CollaborateurInfo[];
+  indications?: string;
+  dateCreation?: string;
+  documents?: Document[];
+  bilans?: Bilan[];
+  
+  // Legacy fields for backward compatibility with existing components
+  idRDQ?: number;
+  idManager?: number;
+  idCollaborateur?: number;
+  idClient?: number;
   idProjet?: number;
-  dateCreation: Date;
-  dateModification: Date;
-  manager: User;
-  collaborateur: User;
-  client: Client;
-  projet?: Projet;
-  documents: Document[];
-  bilans: Bilan[];
+  client?: Client;
 }
 
 export interface AuthContextType {
