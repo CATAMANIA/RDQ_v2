@@ -3,6 +3,7 @@ package com.vibecoding.rdq.service;
 import com.vibecoding.rdq.dto.CreateRdqRequest;
 import com.vibecoding.rdq.dto.DocumentResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
+import com.vibecoding.rdq.dto.UpdateRdqRequest;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.Manager;
 import com.vibecoding.rdq.entity.Collaborateur;
@@ -397,5 +398,110 @@ public class RDQService {
 
         RDQ rdq = rdqOpt.get();
         return rdq.getStatut() == RDQ.StatutRDQ.CLOS;
+    }
+
+    /**
+     * Modifie un RDQ existant avec validation des droits
+     * @param rdqId ID du RDQ à modifier
+     * @param updateRequest Données de modification
+     * @param managerId ID du manager demandeur (obtenu depuis le contexte de sécurité)
+     * @return RdqResponse avec les informations du RDQ modifié
+     * @throws RuntimeException si validation échoue
+     */
+    @Transactional
+    public RdqResponse modifierRdq(Long rdqId, UpdateRdqRequest updateRequest, Long managerId) {
+        // 1. Récupération du RDQ existant
+        RDQ rdq = rdqRepository.findById(rdqId)
+            .orElseThrow(() -> new RuntimeException("RDQ non trouvé avec l'ID: " + rdqId));
+
+        // 2. Vérification que le RDQ n'est pas clos
+        if (rdq.getStatut() == RDQ.StatutRDQ.CLOS) {
+            throw new RuntimeException("Impossible de modifier un RDQ clos");
+        }
+
+        // 3. Vérification que le RDQ n'est pas annulé
+        if (rdq.getStatut() == RDQ.StatutRDQ.ANNULE) {
+            throw new RuntimeException("Impossible de modifier un RDQ annulé");
+        }
+
+        // 4. Vérification des droits - seul le manager propriétaire peut modifier
+        if (!rdq.getManager().getIdManager().equals(managerId)) {
+            throw new RuntimeException("Seul le manager propriétaire peut modifier ce RDQ");
+        }
+
+        // 5. Application des modifications (seulement les champs non null)
+        boolean hasChanges = false;
+
+        if (updateRequest.getTitre() != null) {
+            rdq.setTitre(updateRequest.getTitre());
+            hasChanges = true;
+        }
+
+        if (updateRequest.getDateHeure() != null) {
+            // Validation que la nouvelle date est dans le futur
+            if (updateRequest.getDateHeure().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("La date du RDQ doit être dans le futur");
+            }
+            rdq.setDateHeure(updateRequest.getDateHeure());
+            hasChanges = true;
+        }
+
+        if (updateRequest.getAdresse() != null) {
+            rdq.setAdresse(updateRequest.getAdresse());
+            hasChanges = true;
+        }
+
+        if (updateRequest.getMode() != null) {
+            rdq.setMode(updateRequest.getMode());
+            hasChanges = true;
+        }
+
+        if (updateRequest.getDescription() != null) {
+            rdq.setDescription(updateRequest.getDescription());
+            hasChanges = true;
+        }
+
+        // 7. Modification du projet si spécifié
+        if (updateRequest.getProjetId() != null) {
+            Projet projet = projetRepository.findById(updateRequest.getProjetId())
+                .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + updateRequest.getProjetId()));
+            rdq.setProjet(projet);
+            hasChanges = true;
+        }
+
+        // 8. Modification des collaborateurs si spécifié
+        if (updateRequest.getCollaborateurIds() != null) {
+            // Validation des collaborateurs
+            List<Collaborateur> collaborateurs = updateRequest.getCollaborateurIds().stream()
+                .map(id -> collaborateurRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Collaborateur non trouvé avec l'ID: " + id)))
+                .collect(Collectors.toList());
+
+            if (collaborateurs.isEmpty()) {
+                throw new RuntimeException("Au moins un collaborateur doit être assigné au RDQ");
+            }
+
+            // Suppression des anciennes associations
+            rdq.getCollaborateurs().clear();
+
+            // Ajout des nouvelles associations
+            for (Collaborateur collaborateur : collaborateurs) {
+                rdq.addCollaborateur(collaborateur);
+            }
+            hasChanges = true;
+        }
+
+        if (!hasChanges) {
+            throw new RuntimeException("Aucune modification fournie");
+        }
+
+        // 9. Sauvegarde en base de données
+        RDQ savedRdq = rdqRepository.save(rdq);
+
+        // 10. TODO: Envoyer notifications aux collaborateurs des changements
+        sendNotificationToCollaborateurs(savedRdq, savedRdq.getCollaborateurs());
+
+        // 11. Conversion en DTO de réponse
+        return mapToRdqResponse(savedRdq);
     }
 }

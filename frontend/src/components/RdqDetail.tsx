@@ -1,11 +1,14 @@
 /**
- * Composant de détail d'un RDQ pour le collaborateur
+ * Composant de détail d'u) from 'lucide-react';
+import { RDQ } from '../types';
+import { RdqEditForm } from './RdqEditForm';
+import { useAuth } from '../contexts/AuthContext';RDQ pour le collaborateur
  * Affiche toutes les informations d'un RDQ avec accès aux pièces jointes
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRdq } from '../hooks/useRdqs';
-import { RdqStatusUtils } from '../services/rdqApi';
+import { RdqStatusUtils, RdqApiService } from '../services/rdqApi';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -25,7 +28,10 @@ import {
   Mail,
   Phone,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Edit2,
+  Save,
+  XCircle
 } from 'lucide-react';
 import { RDQ } from '../types';
 
@@ -36,6 +42,9 @@ interface RdqDetailProps {
 
 export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
   const { rdq, loading, error, refresh } = useRdq(rdqId);
+  const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   if (loading) {
     return (
@@ -73,6 +82,23 @@ export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
   const isPassed = dateTime < new Date();
   const canModify = rdq.statut === 'PLANIFIE' || rdq.statut === 'EN_COURS';
   const isClosed = rdq.statut === 'CLOS';
+  const isManager = user?.role === 'MANAGER';
+  const canEdit = isManager && canModify;
+
+  // Fonctions de gestion de l'édition
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const handleUpdateSuccess = async () => {
+    setIsUpdating(false);
+    setIsEditing(false);
+    await refresh(); // Recharger les données depuis l'API
+  };
+
+  const handleUpdateError = () => {
+    setIsUpdating(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -89,10 +115,54 @@ export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
             <p className="text-gray-600">RDQ #{rdq.idRdq}</p>
           </div>
         </div>
-        <Badge variant={RdqStatusUtils.getStatusBadgeVariant(rdq.statut || '')} className="text-sm">
-          {RdqStatusUtils.translateStatus(rdq.statut || '')}
-        </Badge>
+        <div className="flex items-center space-x-2">
+          <Badge variant={RdqStatusUtils.getStatusBadgeVariant(rdq.statut || '')} className="text-sm">
+            {RdqStatusUtils.translateStatus(rdq.statut || '')}
+          </Badge>
+          {canEdit && (
+            <Button
+              onClick={handleEditToggle}
+              variant={isEditing ? "secondary" : "outline"}
+              size="sm"
+              disabled={isUpdating}
+            >
+              {isEditing ? (
+                <>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Annuler
+                </>
+              ) : (
+                <>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Modifier
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Formulaire d'édition */}
+      {isEditing && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Edit2 className="h-5 w-5 mr-2" />
+              Modifier le RDQ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RdqEditForm
+              rdq={rdq}
+              onSuccess={handleUpdateSuccess}
+              onError={handleUpdateError}
+              onCancel={handleEditToggle}
+              isLoading={isUpdating}
+              onLoadingChange={setIsUpdating}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Informations principales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
