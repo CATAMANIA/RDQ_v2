@@ -10,6 +10,8 @@ import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.Manager;
 import com.vibecoding.rdq.entity.Collaborateur;
 import com.vibecoding.rdq.entity.Projet;
+import com.vibecoding.rdq.entity.User;
+import com.vibecoding.rdq.enums.TypeNotification;
 
 import com.vibecoding.rdq.repository.RDQRepository;
 import com.vibecoding.rdq.repository.ManagerRepository;
@@ -46,6 +48,9 @@ public class RDQService {
     
     @Autowired
     private ProjetRepository projetRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public List<RDQ> findAll() {
         return rdqRepository.findAll();
@@ -141,8 +146,9 @@ public class RDQService {
         // 6. Sauvegarde en base de données
         RDQ savedRdq = rdqRepository.save(rdq);
 
-        // 7. TODO: Envoyer notifications aux collaborateurs
+        // 7. Envoyer notifications aux collaborateurs et manager
         sendNotificationToCollaborateurs(savedRdq, collaborateurs);
+        sendRdqCreatedNotifications(savedRdq);
 
         // 8. Conversion en DTO de réponse
         return mapToRdqResponse(savedRdq);
@@ -217,28 +223,104 @@ public class RDQService {
     }
 
     /**
-     * Envoie des notifications aux collaborateurs assignés
-     * TODO: Implémenter le système de notification réel
+     * Envoie des notifications aux collaborateurs assignés pour un nouveau RDQ
      */
     private void sendNotificationToCollaborateurs(RDQ rdq, List<Collaborateur> collaborateurs) {
-        // Placeholder pour le système de notification
-        // Dans une implémentation réelle, ceci pourrait :
-        // - Envoyer des emails
-        // - Créer des notifications dans l'application
-        // - Intégrer avec un service de messagerie externe
-        
+        String title = "Nouveau RDQ assigné";
         String message = String.format(
-            "Nouveau RDQ créé: %s le %s. Manager: %s",
+            "Un nouveau RDQ '%s' vous a été assigné pour le %s par %s. Projet: %s",
             rdq.getTitre(),
-            rdq.getDateHeure(),
-            rdq.getManager().getFullName()
+            rdq.getDateHeure().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+            rdq.getManager().getFullName(),
+            rdq.getProjet().getNom()
         );
-        
-        // Log pour l'instant
-        System.out.println("Notification envoyée à " + collaborateurs.size() + " collaborateurs: " + message);
-        
-        for (Collaborateur collaborateur : collaborateurs) {
-            System.out.println("  - " + collaborateur.getFullName() + " (" + collaborateur.getEmail() + ")");
+
+        // Créer les notifications pour chaque collaborateur
+        List<User> users = collaborateurs.stream()
+            .map(Collaborateur::getUser)
+            .filter(user -> user != null)
+            .toList();
+
+        if (!users.isEmpty()) {
+            notificationService.notifyUsers(users, TypeNotification.RDQ_ASSIGNED, title, message, rdq, null);
+        }
+    }
+
+    /**
+     * Envoie des notifications pour la création d'un RDQ (au manager et autres)
+     */
+    private void sendRdqCreatedNotifications(RDQ rdq) {
+        // Notification au manager créateur
+        if (rdq.getManager().getUser() != null) {
+            String title = "RDQ créé avec succès";
+            String message = String.format(
+                "Votre RDQ '%s' prévu le %s a été créé avec succès. %d collaborateur(s) ont été notifiés.",
+                rdq.getTitre(),
+                rdq.getDateHeure().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                rdq.getCollaborateurs().size()
+            );
+            
+            notificationService.createNotification(
+                TypeNotification.RDQ_CREATED, title, message, rdq.getManager().getUser(), rdq
+            );
+        }
+    }
+
+    /**
+     * Envoie des notifications pour la mise à jour d'un RDQ
+     */
+    public void sendRdqUpdatedNotifications(RDQ rdq, RDQ.StatutRDQ oldStatus) {
+        String title = "RDQ modifié";
+        String message = String.format(
+            "Le RDQ '%s' a été modifié. Nouveau statut: %s",
+            rdq.getTitre(),
+            rdq.getStatut().name()
+        );
+
+        // Notifier les collaborateurs assignés
+        List<User> collaborateurUsers = rdq.getCollaborateurs().stream()
+            .map(Collaborateur::getUser)
+            .filter(user -> user != null)
+            .toList();
+
+        if (!collaborateurUsers.isEmpty()) {
+            TypeNotification type = (oldStatus != rdq.getStatut()) ? 
+                TypeNotification.RDQ_STATUS_CHANGED : TypeNotification.RDQ_UPDATED;
+                
+            notificationService.notifyUsers(collaborateurUsers, type, title, message, rdq, null);
+        }
+
+        // Notifier le manager
+        if (rdq.getManager().getUser() != null) {
+            notificationService.createNotification(
+                TypeNotification.RDQ_UPDATED, title, message, rdq.getManager().getUser(), rdq
+            );
+        }
+    }
+
+    /**
+     * Envoie des notifications pour l'annulation d'un RDQ
+     */
+    public void sendRdqCancelledNotifications(RDQ rdq) {
+        String title = "RDQ annulé";
+        String message = String.format(
+            "Le RDQ '%s' prévu le %s a été annulé.",
+            rdq.getTitre(),
+            rdq.getDateHeure().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+        );
+
+        // Notifier tous les participants
+        List<User> allUsers = rdq.getCollaborateurs().stream()
+            .map(Collaborateur::getUser)
+            .filter(user -> user != null)
+            .collect(Collectors.toCollection(java.util.ArrayList::new));
+
+        if (rdq.getManager().getUser() != null) {
+            allUsers.add(rdq.getManager().getUser());
+        }
+
+        if (!allUsers.isEmpty()) {
+            notificationService.notifyUsers(allUsers, TypeNotification.RDQ_CANCELLED, title, message, rdq, null);
         }
     }
 
