@@ -10,6 +10,7 @@ import { RDQCard } from './RDQCard';
 import { RDQModal } from './RDQModal';
 import { CreateRDQModal } from './CreateRDQModal';
 import { BilanModal } from './BilanModal';
+import NotificationCenter from './NotificationCenter';
 
 import { PaginationControls } from './ui/pagination-controls';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -177,20 +178,38 @@ export const ManagerDashboard: React.FC = () => {
         </div>
         
         <motion.div
+          className="flex items-center gap-3"
           initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
         >
-          <Button 
-            onClick={() => setShowCreateModal(true)} 
-            className="flex items-center space-x-2 transition-all duration-200 hover:shadow-lg"
+          {/* Centre de notifications */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Créer un RDQ</span>
-            <span className="sm:hidden">Créer</span>
-          </Button>
+            <NotificationCenter 
+              className="notification-center-dashboard"
+              autoStartPolling={true}
+              maxDisplayedNotifications={15}
+              showPreferences={true}
+            />
+          </motion.div>
+          
+          {/* Bouton créer RDQ */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+              onClick={() => setShowCreateModal(true)} 
+              className="flex items-center space-x-2 transition-all duration-200 hover:shadow-lg"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Créer un RDQ</span>
+              <span className="sm:hidden">Créer</span>
+            </Button>
+          </motion.div>
         </motion.div>
       </motion.div>
 
