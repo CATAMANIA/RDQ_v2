@@ -30,13 +30,16 @@ export interface Document {
   idRDQ: number;
 }
 
+export type TypeAuteur = 'MANAGER' | 'COLLABORATEUR';
+
 export interface Bilan {
   idBilan: number;
-  note: number; // 1 à 10
+  note: number; // 1 à 10 (mise à jour TM-38)
   commentaire?: string;
-  auteur: 'manager' | 'collaborateur';
-  idRDQ: number;
-  dateCreation: Date;
+  auteur: string; // Nom de l'auteur
+  typeAuteur: TypeAuteur; // MANAGER ou COLLABORATEUR (TM-38)
+  idRDQ?: number; // ID du RDQ associé
+  dateCreation: string; // ISO string from API
 }
 
 export interface ManagerInfo {
