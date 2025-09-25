@@ -24,7 +24,8 @@ RDQ_v2/
 ```
 
 ### Key Components
-- **Frontend (`frontend/`)**: React SPA transitioning to Angular LTS
+- **Frontend REACT(`frontend-react/`)**: React SPA transitioning to Angular LTS
+- **Frontend ANGULAR(`frontend-angular/`)**: Angular LTS application
 - **Backend**: Spring Boot application using Java 21
 - **API Layer**: RESTful services connecting frontend and backend
 - **Data Layer**: *TBD - to be documented based on chosen persistence*
@@ -40,7 +41,8 @@ cd backend
 ./mvnw clean install
 
 # Frontend setup (React/Angular)
-cd frontend
+cd frontend-react # During React phase
+cd frontend-angular  # During Angular phase
 npm install
 ```
 
@@ -110,7 +112,8 @@ cd backend
 
 #### Frontend (React → Angular Migration)
 ```bash
-cd frontend
+cd frontend-react  # During React phase
+cd frontend-angular  # During Angular phase
 # React phase
 npm start                       # Development server
 npm test                        # Run tests

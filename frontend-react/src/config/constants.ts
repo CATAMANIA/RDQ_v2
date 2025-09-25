@@ -97,16 +97,16 @@ export const DATE_FORMATS = {
 
 // Configuration de l'environnement
 export const ENV_CONFIG = {
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
-  appVersion: process.env.REACT_APP_VERSION || '1.0.0',
-  buildDate: process.env.REACT_APP_BUILD_DATE || new Date().toISOString(),
+  isDevelopment: import.meta.env.DEV,
+  isProduction: import.meta.env.PROD,
+  isTest: import.meta.env.MODE === 'test',
+  appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
+  buildDate: import.meta.env.VITE_APP_BUILD_DATE || new Date().toISOString(),
 };
 
 // Configuration du debug
 export const DEBUG_CONFIG = {
   enableConsoleLogging: ENV_CONFIG.isDevelopment,
   enableNetworkLogging: ENV_CONFIG.isDevelopment,
-  enableStateLogging: ENV_CONFIG.isDevelopment && !!process.env.REACT_APP_DEBUG_STATE,
+  enableStateLogging: ENV_CONFIG.isDevelopment && !!import.meta.env.VITE_APP_DEBUG_STATE,
 };
