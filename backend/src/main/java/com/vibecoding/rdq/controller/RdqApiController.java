@@ -1,10 +1,12 @@
 package com.vibecoding.rdq.controller;
 
 import com.vibecoding.rdq.dto.CreateRdqRequest;
+import com.vibecoding.rdq.dto.ExternalIntegrationResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.User;
 import com.vibecoding.rdq.service.RDQService;
+import com.vibecoding.rdq.service.ExternalIntegrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -35,6 +37,9 @@ public class RdqApiController {
 
     @Autowired
     private RDQService rdqService;
+
+    @Autowired
+    private ExternalIntegrationService externalIntegrationService;
 
     /**
      * Créer un nouveau RDQ (MANAGER uniquement)
@@ -267,6 +272,55 @@ public class RdqApiController {
                 .body(Map.of(
                     "success", false,
                     "error", "Erreur lors de la récupération des documents"
+                ));
+        }
+    }
+
+    /**
+     * Récupérer les intégrations externes pour un RDQ
+     */
+    @GetMapping("/{id}/external-integrations")
+    @Operation(
+        summary = "Récupérer les intégrations externes",
+        description = "Génère les URLs d'intégration avec les applications externes (email, maps, calendrier)"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Intégrations générées avec succès"),
+        @ApiResponse(responseCode = "401", description = "Non authentifié"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé")
+    })
+    @PreAuthorize("hasRole('MANAGER') or hasRole('COLLABORATEUR')")
+    public ResponseEntity<?> getExternalIntegrations(
+            @Parameter(description = "ID du RDQ") @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        
+        try {
+            // Récupérer le RDQ pour les intégrations
+            Optional<RDQ> rdqOptional = rdqService.findRdqEntityById(id);
+            
+            if (rdqOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                        "success", false,
+                        "error", "RDQ non trouvé avec l'ID: " + id
+                    ));
+            }
+
+            RDQ rdq = rdqOptional.get();
+            List<ExternalIntegrationResponse> integrations = 
+                externalIntegrationService.generateExternalIntegrations(rdq);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", integrations,
+                "rdqId", id
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false,
+                    "error", "Erreur lors de la génération des intégrations externes"
                 ));
         }
     }

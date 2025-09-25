@@ -10,6 +10,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
+import { ExternalActionsPanel } from './ExternalActionsPanel';
 import { 
   Calendar, 
   MapPin, 
@@ -244,6 +245,9 @@ export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
         </Card>
       )}
 
+      {/* Actions externes */}
+      <ExternalActionsPanel rdq={rdq} />
+
       {/* Actions */}
       {!canModify && (
         <Card className="border-yellow-200 bg-yellow-50">
@@ -283,12 +287,12 @@ const DocumentItem: React.FC<DocumentItemProps> = ({ document }) => {
 
   const handleDownload = () => {
     if (document.url) {
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = document.url;
       link.download = document.nomFichier;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
     }
   };
 
