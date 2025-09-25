@@ -11,6 +11,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
 import { ExternalActionsPanel } from './ExternalActionsPanel';
+import { RdqClotureControls } from './RdqClotureControls';
 import { 
   Calendar, 
   MapPin, 
@@ -71,6 +72,7 @@ export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
   const isUpcoming = dateTime > new Date();
   const isPassed = dateTime < new Date();
   const canModify = rdq.statut === 'PLANIFIE' || rdq.statut === 'EN_COURS';
+  const isClosed = rdq.statut === 'CLOS';
 
   return (
     <div className="space-y-6">
@@ -248,14 +250,26 @@ export const RdqDetail: React.FC<RdqDetailProps> = ({ rdqId, onBack }) => {
       {/* Actions externes */}
       <ExternalActionsPanel rdq={rdq} />
 
+      {/* Contrôles de clôture/réouverture */}
+      <RdqClotureControls 
+        rdq={rdq} 
+        onStatusChange={(newStatus) => {
+          // Mettre à jour le statut du RDQ et recharger
+          refresh();
+        }}
+        userRole="manager" // TODO: Récupérer le rôle depuis le contexte d'auth
+      />
+
       {/* Actions */}
-      {!canModify && (
-        <Card className="border-yellow-200 bg-yellow-50">
+      {(!canModify || isClosed) && (
+        <Card className={isClosed ? "border-gray-300 bg-gray-50" : "border-yellow-200 bg-yellow-50"}>
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-yellow-800">
+            <div className={`flex items-center space-x-2 ${isClosed ? 'text-gray-700' : 'text-yellow-800'}`}>
               <AlertCircle className="h-5 w-5" />
               <p className="text-sm">
-                {rdq.statut === 'TERMINE' ? 
+                {rdq.statut === 'CLOS' ? 
+                  'Ce RDQ est clôturé et ne peut plus être modifié.' :
+                  rdq.statut === 'TERMINE' ? 
                   'Ce RDQ est terminé et ne peut plus être modifié.' :
                   rdq.statut === 'ANNULE' ?
                   'Ce RDQ a été annulé.' :

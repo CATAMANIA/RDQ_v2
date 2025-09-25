@@ -66,7 +66,7 @@ export interface RDQ {
   dateHeure: string; // ISO string from API
   adresse?: string;
   mode: 'PRESENTIEL' | 'DISTANCIEL' | 'HYBRIDE';
-  statut?: 'PLANIFIE' | 'EN_COURS' | 'TERMINE' | 'ANNULE';
+  statut?: 'PLANIFIE' | 'EN_COURS' | 'TERMINE' | 'ANNULE' | 'CLOS';
   description?: string;
   manager?: ManagerInfo;
   projet?: ProjetInfo;

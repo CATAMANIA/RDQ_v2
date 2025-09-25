@@ -70,7 +70,7 @@ public class RDQ {
     }
 
     public enum StatutRDQ {
-        PLANIFIE, EN_COURS, TERMINE, ANNULE
+        PLANIFIE, EN_COURS, TERMINE, ANNULE, CLOS
     }
 
     // Constructors

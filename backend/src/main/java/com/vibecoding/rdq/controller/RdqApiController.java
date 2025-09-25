@@ -218,7 +218,7 @@ public class RdqApiController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of(
                     "success", false,
-                    "error", "Statut invalide. Valeurs autorisées: PLANIFIE, EN_COURS, TERMINE, ANNULE"
+                    "error", "Statut invalide. Valeurs autorisées: PLANIFIE, EN_COURS, TERMINE, ANNULE, CLOS"
                 ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -339,6 +339,138 @@ public class RdqApiController {
             "service", "RDQ API",
             "version", "1.0",
             "timestamp", System.currentTimeMillis()
+        ));
+    }
+
+    /**
+     * Clôturer un RDQ (MANAGER uniquement)
+     */
+    @PutMapping("/{id}/cloturer")
+    @PreAuthorize("hasRole('MANAGER')")
+    @Operation(
+        summary = "Clôturer un RDQ",
+        description = "Permet à un manager de clôturer un RDQ si les deux bilans sont présents"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "RDQ clôturé avec succès"),
+        @ApiResponse(responseCode = "400", description = "Prérequis non remplis pour la clôture"),
+        @ApiResponse(responseCode = "403", description = "Accès refusé - Manager requis"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé")
+    })
+    public ResponseEntity<Map<String, Object>> cloturerRdq(
+            @Parameter(description = "ID du RDQ à clôturer")
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        
+        try {
+            RDQ rdqClos = rdqService.cloturerRdq(id);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "RDQ clôturé avec succès",
+                "rdq", Map.of(
+                    "id", rdqClos.getIdRdq(),
+                    "titre", rdqClos.getTitre(),
+                    "statut", rdqClos.getStatut().toString()
+                )
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                    "success", false,
+                    "error", "RDQ non trouvé"
+                ));
+                
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+                ));
+        }
+    }
+
+    /**
+     * Rouvrir un RDQ clos (MANAGER uniquement)
+     */
+    @PutMapping("/{id}/rouvrir")
+    @PreAuthorize("hasRole('MANAGER')")
+    @Operation(
+        summary = "Rouvrir un RDQ clos",
+        description = "Permet à un manager de rouvrir un RDQ précédemment clos"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "RDQ rouvert avec succès"),
+        @ApiResponse(responseCode = "400", description = "Le RDQ n'est pas clos"),
+        @ApiResponse(responseCode = "403", description = "Accès refusé - Manager requis"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé")
+    })
+    public ResponseEntity<Map<String, Object>> rouvrirRdq(
+            @Parameter(description = "ID du RDQ à rouvrir")
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        
+        try {
+            RDQ rdqRouvert = rdqService.rouvrirRdq(id);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "RDQ rouvert avec succès",
+                "rdq", Map.of(
+                    "id", rdqRouvert.getIdRdq(),
+                    "titre", rdqRouvert.getTitre(),
+                    "statut", rdqRouvert.getStatut().toString()
+                )
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                    "success", false,
+                    "error", "RDQ non trouvé"
+                ));
+                
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+                ));
+        }
+    }
+
+    /**
+     * Vérifier si un RDQ peut être clôturé
+     */
+    @GetMapping("/{id}/peut-cloturer")
+    @Operation(
+        summary = "Vérifier si un RDQ peut être clôturé",
+        description = "Vérifie les prérequis pour la clôture d'un RDQ"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Vérification effectuée"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé")
+    })
+    public ResponseEntity<Map<String, Object>> peutCloturerRdq(
+            @Parameter(description = "ID du RDQ à vérifier")
+            @PathVariable Long id) {
+        
+        if (!rdqService.findById(id).isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                    "success", false,
+                    "error", "RDQ non trouvé"
+                ));
+        }
+        
+        boolean peutCloture = rdqService.peutEtreCloture(id);
+        boolean peutRouvrir = rdqService.peutEtreRouvert(id);
+        
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "peutCloture", peutCloture,
+            "peutRouvrir", peutRouvrir
         ));
     }
 

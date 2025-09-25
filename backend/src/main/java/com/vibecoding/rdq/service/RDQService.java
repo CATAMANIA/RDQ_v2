@@ -294,4 +294,108 @@ public class RDQService {
             .map(this::mapToRdqResponse)
             .collect(Collectors.toList());
     }
+
+    /**
+     * Clôture un RDQ après validation des prérequis
+     * @param rdqId ID du RDQ à clôturer
+     * @return RDQ clôturé
+     * @throws IllegalStateException si les prérequis ne sont pas remplis
+     */
+    @Transactional
+    public RDQ cloturerRdq(Long rdqId) {
+        RDQ rdq = rdqRepository.findById(rdqId)
+            .orElseThrow(() -> new IllegalArgumentException("RDQ non trouvé avec l'ID: " + rdqId));
+
+        // Vérifier que le RDQ n'est pas déjà clos
+        if (rdq.getStatut() == RDQ.StatutRDQ.CLOS) {
+            throw new IllegalStateException("Le RDQ est déjà clos");
+        }
+
+        // Vérifier que le RDQ n'est pas annulé
+        if (rdq.getStatut() == RDQ.StatutRDQ.ANNULE) {
+            throw new IllegalStateException("Impossible de clôturer un RDQ annulé");
+        }
+
+        // Vérifier la présence des deux bilans (manager et collaborateur)
+        boolean hasManagerBilan = rdq.getBilans().stream()
+            .anyMatch(bilan -> bilan.getTypeAuteur() == com.vibecoding.rdq.entity.Bilan.TypeAuteur.MANAGER);
+        
+        boolean hasCollaborateurBilan = rdq.getBilans().stream()
+            .anyMatch(bilan -> bilan.getTypeAuteur() == com.vibecoding.rdq.entity.Bilan.TypeAuteur.COLLABORATEUR);
+
+        if (!hasManagerBilan || !hasCollaborateurBilan) {
+            StringBuilder missingBilans = new StringBuilder("Bilans manquants: ");
+            if (!hasManagerBilan) missingBilans.append("Manager ");
+            if (!hasCollaborateurBilan) missingBilans.append("Collaborateur");
+            throw new IllegalStateException(missingBilans.toString());
+        }
+
+        // Clôturer le RDQ
+        rdq.setStatut(RDQ.StatutRDQ.CLOS);
+        return rdqRepository.save(rdq);
+    }
+
+    /**
+     * Rouvre un RDQ clos
+     * @param rdqId ID du RDQ à rouvrir
+     * @return RDQ rouvert
+     * @throws IllegalStateException si le RDQ n'est pas clos
+     */
+    @Transactional
+    public RDQ rouvrirRdq(Long rdqId) {
+        RDQ rdq = rdqRepository.findById(rdqId)
+            .orElseThrow(() -> new IllegalArgumentException("RDQ non trouvé avec l'ID: " + rdqId));
+
+        // Vérifier que le RDQ est bien clos
+        if (rdq.getStatut() != RDQ.StatutRDQ.CLOS) {
+            throw new IllegalStateException("Seuls les RDQ clos peuvent être rouverts");
+        }
+
+        // Rouvrir le RDQ (remettre en EN_COURS)
+        rdq.setStatut(RDQ.StatutRDQ.EN_COURS);
+        return rdqRepository.save(rdq);
+    }
+
+    /**
+     * Vérifie si un RDQ peut être clôturé
+     * @param rdqId ID du RDQ à vérifier
+     * @return true si le RDQ peut être clôturé, false sinon
+     */
+    public boolean peutEtreCloture(Long rdqId) {
+        Optional<RDQ> rdqOpt = rdqRepository.findById(rdqId);
+        if (rdqOpt.isEmpty()) {
+            return false;
+        }
+
+        RDQ rdq = rdqOpt.get();
+        
+        // Ne peut pas être clôturé s'il est déjà clos ou annulé
+        if (rdq.getStatut() == RDQ.StatutRDQ.CLOS || rdq.getStatut() == RDQ.StatutRDQ.ANNULE) {
+            return false;
+        }
+
+        // Vérifier la présence des deux bilans
+        boolean hasManagerBilan = rdq.getBilans().stream()
+            .anyMatch(bilan -> bilan.getTypeAuteur() == com.vibecoding.rdq.entity.Bilan.TypeAuteur.MANAGER);
+        
+        boolean hasCollaborateurBilan = rdq.getBilans().stream()
+            .anyMatch(bilan -> bilan.getTypeAuteur() == com.vibecoding.rdq.entity.Bilan.TypeAuteur.COLLABORATEUR);
+
+        return hasManagerBilan && hasCollaborateurBilan;
+    }
+
+    /**
+     * Vérifie si un RDQ peut être rouvert
+     * @param rdqId ID du RDQ à vérifier
+     * @return true si le RDQ peut être rouvert, false sinon
+     */
+    public boolean peutEtreRouvert(Long rdqId) {
+        Optional<RDQ> rdqOpt = rdqRepository.findById(rdqId);
+        if (rdqOpt.isEmpty()) {
+            return false;
+        }
+
+        RDQ rdq = rdqOpt.get();
+        return rdq.getStatut() == RDQ.StatutRDQ.CLOS;
+    }
 }
