@@ -121,6 +121,7 @@ export const RdqStatusUtils = {
       'EN_COURS': 'En cours',
       'TERMINE': 'Terminé',
       'ANNULE': 'Annulé',
+      'CLOS': 'Clôturé',
     };
     return translations[status] || status;
   },
@@ -138,6 +139,8 @@ export const RdqStatusUtils = {
         return 'secondary';
       case 'ANNULE':
         return 'destructive';
+      case 'CLOS':
+        return 'secondary';
       default:
         return 'outline';
     }
@@ -147,7 +150,7 @@ export const RdqStatusUtils = {
    * Détermine si un RDQ est dans l'historique
    */
   isHistorical: (status: string): boolean => {
-    return status === 'TERMINE' || status === 'ANNULE';
+    return status === 'TERMINE' || status === 'ANNULE' || status === 'CLOS';
   },
 
   /**
