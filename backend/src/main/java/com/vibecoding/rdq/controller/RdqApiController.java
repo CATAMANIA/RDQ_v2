@@ -4,6 +4,8 @@ import com.vibecoding.rdq.dto.CreateRdqRequest;
 import com.vibecoding.rdq.dto.ExternalIntegrationResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
 import com.vibecoding.rdq.dto.UpdateRdqRequest;
+import com.vibecoding.rdq.dto.RdqSearchCriteria;
+import com.vibecoding.rdq.dto.RdqSearchResponse;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.User;
 import com.vibecoding.rdq.service.RDQService;
@@ -16,11 +18,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
 
 import java.util.List;
 import java.util.Map;
@@ -541,6 +547,202 @@ public class RdqApiController {
             "peutCloture", peutCloture,
             "peutRouvrir", peutRouvrir
         ));
+    }
+
+    // ========== Nouveaux endpoints pour TM-41 - Recherche et filtrage avancé ==========
+
+    /**
+     * Recherche avancée de RDQ avec filtrage et pagination
+     * Support de multiples critères de filtrage pour TM-41 - US09
+     */
+    @GetMapping("/search")
+    @Operation(
+        summary = "Recherche avancée de RDQ",
+        description = "Recherche paginée avec filtrage par client, collaborateur, statut, dates, etc."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Recherche effectuée avec succès"),
+        @ApiResponse(responseCode = "400", description = "Paramètres de recherche invalides"),
+        @ApiResponse(responseCode = "403", description = "Accès refusé")
+    })
+    @PreAuthorize("hasRole('MANAGER') or hasRole('COLLABORATEUR')")
+    public ResponseEntity<RdqSearchResponse> searchRdqs(
+            @Parameter(description = "Nom du client") @RequestParam(required = false) String clientNom,
+            @Parameter(description = "ID du client") @RequestParam(required = false) Long clientId,
+            @Parameter(description = "Nom du collaborateur") @RequestParam(required = false) String collaborateurNom,
+            @Parameter(description = "ID du collaborateur") @RequestParam(required = false) Long collaborateurId,
+            @Parameter(description = "ID du manager") @RequestParam(required = false) Long managerId,
+            @Parameter(description = "Nom du projet") @RequestParam(required = false) String projetNom,
+            @Parameter(description = "ID du projet") @RequestParam(required = false) Long projetId,
+            @Parameter(description = "Statuts (PLANIFIE,EN_COURS,TERMINE,ANNULE,CLOS)") @RequestParam(required = false) String statuts,
+            @Parameter(description = "Modes (PRESENTIEL,DISTANCIEL,HYBRIDE)") @RequestParam(required = false) String modes,
+            @Parameter(description = "Date de début (yyyy-MM-dd'T'HH:mm:ss)") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateDebut,
+            @Parameter(description = "Date de fin (yyyy-MM-dd'T'HH:mm:ss)") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFin,
+            @Parameter(description = "Terme de recherche textuelle") @RequestParam(required = false) String searchTerm,
+            @Parameter(description = "Numéro de page (0-indexé)") @RequestParam(defaultValue = "0") Integer page,
+            @Parameter(description = "Taille de page (1-100)") @RequestParam(defaultValue = "10") Integer size,
+            @Parameter(description = "Champ de tri") @RequestParam(defaultValue = "dateHeure") String sortBy,
+            @Parameter(description = "Direction de tri (ASC/DESC)") @RequestParam(defaultValue = "DESC") String sortDirection,
+            @Parameter(description = "Inclure l'historique (RDQ terminés/annulés)") @RequestParam(defaultValue = "false") Boolean includeHistory,
+            @Parameter(description = "Inclure les documents") @RequestParam(defaultValue = "false") Boolean includeDocuments,
+            @Parameter(description = "Inclure les bilans") @RequestParam(defaultValue = "false") Boolean includeBilans,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        try {
+            // Construction des critères de recherche
+            RdqSearchCriteria criteriaBuilder = RdqSearchCriteria.builder()
+                .clientNom(clientNom)
+                .clientId(clientId)
+                .collaborateurNom(collaborateurNom)
+                .collaborateurId(collaborateurId)
+                .managerId(managerId)
+                .projetNom(projetNom)
+                .projetId(projetId)
+                .dateDebut(dateDebut)
+                .dateFin(dateFin)
+                .searchTerm(searchTerm)
+                .page(page)
+                .size(size)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .includeHistory(includeHistory)
+                .includeDocuments(includeDocuments)
+                .includeBilans(includeBilans);
+
+            // Parsing des statuts
+            if (statuts != null && !statuts.trim().isEmpty()) {
+                criteriaBuilder.statuts(
+                    Arrays.stream(statuts.split(","))
+                        .map(String::trim)
+                        .map(RDQ.StatutRDQ::valueOf)
+                        .toList()
+                );
+            }
+
+            // Parsing des modes
+            if (modes != null && !modes.trim().isEmpty()) {
+                criteriaBuilder.modes(
+                    Arrays.asList(modes.split(","))
+                );
+            }
+
+            // Filtrage par rôle utilisateur
+            if ("MANAGER".equals(currentUser.getRole().name())) {
+                if (managerId == null) {
+                    criteriaBuilder.managerId(currentUser.getIdUser());
+                    criteriaBuilder.myRdqsOnly(true);
+                }
+            } else if ("COLLABORATEUR".equals(currentUser.getRole().name())) {
+                if (collaborateurId == null) {
+                    criteriaBuilder.collaborateurId(currentUser.getIdUser());
+                    criteriaBuilder.myAssignmentsOnly(true);
+                }
+            }
+
+            RdqSearchCriteria criteria = criteriaBuilder.build();
+
+            // Exécution de la recherche
+            RdqSearchResponse response = rdqService.searchRdqs(criteria);
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            RdqSearchResponse errorResponse = RdqSearchResponse.builder()
+                .rdqs(List.of())
+                .currentPage(0)
+                .totalPages(0)
+                .pageSize(size)
+                .totalElements(0L)
+                .appliedFiltersDescription("Erreur: " + e.getMessage())
+                .build();
+            
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            RdqSearchResponse errorResponse = RdqSearchResponse.builder()
+                .rdqs(List.of())
+                .currentPage(0)
+                .totalPages(0)
+                .pageSize(size)
+                .totalElements(0L)
+                .appliedFiltersDescription("Erreur serveur: " + e.getMessage())
+                .build();
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Export des RDQ selon critères (CSV/Excel futur)
+     */
+    @GetMapping("/export")
+    @Operation(
+        summary = "Export des RDQ",
+        description = "Export des RDQ selon critères de filtrage (limite 1000 résultats)"
+    )
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<List<RdqResponse>> exportRdqs(
+            @Parameter(description = "Critères identiques à /search") @RequestParam(required = false) String clientNom,
+            @RequestParam(required = false) Long clientId,
+            @RequestParam(required = false) String collaborateurNom,
+            @RequestParam(required = false) Long collaborateurId,
+            @RequestParam(required = false) Long managerId,
+            @RequestParam(required = false) String projetNom,
+            @RequestParam(required = false) Long projetId,
+            @RequestParam(required = false) String statuts,
+            @RequestParam(required = false) String modes,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateDebut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFin,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(defaultValue = "dateHeure") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection,
+            @RequestParam(defaultValue = "true") Boolean includeHistory,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        try {
+            // Construction des critères similaires à la recherche
+            RdqSearchCriteria criteriaBuilder = RdqSearchCriteria.builder()
+                .clientNom(clientNom)
+                .clientId(clientId)
+                .collaborateurNom(collaborateurNom)
+                .collaborateurId(collaborateurId)
+                .managerId(managerId != null ? managerId : currentUser.getIdUser())
+                .projetNom(projetNom)
+                .projetId(projetId)
+                .dateDebut(dateDebut)
+                .dateFin(dateFin)
+                .searchTerm(searchTerm)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .includeHistory(includeHistory)
+                .myRdqsOnly(true); // Managers ne peuvent exporter que leurs RDQ
+
+            // Parsing des statuts et modes
+            if (statuts != null && !statuts.trim().isEmpty()) {
+                criteriaBuilder.statuts(
+                    Arrays.stream(statuts.split(","))
+                        .map(String::trim)
+                        .map(RDQ.StatutRDQ::valueOf)
+                        .toList()
+                );
+            }
+
+            if (modes != null && !modes.trim().isEmpty()) {
+                criteriaBuilder.modes(Arrays.asList(modes.split(",")));
+            }
+
+            RdqSearchCriteria criteria = criteriaBuilder.build();
+
+            // Export via service
+            List<RdqResponse> rdqs = rdqService.exportRdqs(criteria);
+
+            return ResponseEntity.ok(rdqs);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(List.of());
+        }
     }
 
     /**
