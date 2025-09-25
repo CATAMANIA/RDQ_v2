@@ -54,22 +54,33 @@ For each JIRA ticket implementation, follow this standardized workflow:
 - Where `XX` corresponds to the JIRA ticket number (e.g., `feature/TM-33`, `feature/TM-49`)
 - Branch from `main` branch
 
-#### 2. Development Process
+#### 2. JIRA Ticket Assignment & Status (AUTOMATIQUE)
+- **⚠️ OBLIGATOIRE**: Avant toute implémentation, exécuter automatiquement :
+  1. Assigner le ticket au développeur connecté (account_id: `63fdcc6f7c30bbd6b33df040`)
+  2. Passer le statut de "À faire" vers "En cours" 
+  3. Ajouter commentaire de début d'implémentation
+- **Objectif**: Éviter les conflits entre développeurs travaillant simultanément
+
+#### 3. Development Process
 - Implement the feature according to JIRA acceptance criteria
 - Commit code incrementally with meaningful commit messages
 - Push feature branch to GitHub repository
 
-#### 3. Pull Request Creation
+#### 4. Pull Request Creation
 - **IMPORTANT**: Use MCP GitHub tools instead of CLI commands for PR operations
 - Create Pull Request from feature branch to `main` using MCP tools
 - Include JIRA ticket reference in PR title and description
 - Link PR to corresponding JIRA ticket for traceability
 
-#### 4. JIRA Status Management
+#### 5. JIRA Status Management
+- **🎯 DÉBUT D'IMPLÉMENTATION (OBLIGATOIRE)**:
+  - Assigner automatiquement le ticket au compte connecté (`63fdcc6f7c30bbd6b33df040` - André-Pierre ABELLARD)
+  - Passer immédiatement le statut à "En cours" pour éviter les conflits entre développeurs
+  - Ajouter un commentaire indiquant le début des travaux
 - **Acceptance Criteria Validation**: Review all acceptance criteria defined in the JIRA ticket
 - **Status Update Rules**:
+  - 🔄 **"En cours"** (In Progress): Travaux en cours d'implémentation (statut automatique en début)
   - ✅ **"Terminé"** (Done): All acceptance criteria are fully implemented and validated
-  - 🔄 **"En cours"** (In Progress): Partial implementation or acceptance criteria not yet met
 - Update JIRA ticket status based on completion assessment
 
 ### Key Commands
