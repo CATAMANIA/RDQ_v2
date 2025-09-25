@@ -3,6 +3,7 @@ package com.vibecoding.rdq.controller;
 import com.vibecoding.rdq.dto.CreateRdqRequest;
 import com.vibecoding.rdq.dto.ExternalIntegrationResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
+import com.vibecoding.rdq.dto.UpdateRdqRequest;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.User;
 import com.vibecoding.rdq.service.RDQService;
@@ -340,6 +341,74 @@ public class RdqApiController {
             "version", "1.0",
             "timestamp", System.currentTimeMillis()
         ));
+    }
+
+    /**
+     * Modifier un RDQ (MANAGER propriétaire uniquement)
+     */
+    @PutMapping("/{id}")
+    @Operation(
+        summary = "Modifier un RDQ existant",
+        description = "Permet au manager propriétaire de modifier un RDQ tant qu'il n'est pas clos"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "RDQ modifié avec succès"),
+        @ApiResponse(responseCode = "400", description = "Données invalides"),
+        @ApiResponse(responseCode = "401", description = "Non authentifié"),
+        @ApiResponse(responseCode = "403", description = "Accès refusé - Seul le manager propriétaire peut modifier"),
+        @ApiResponse(responseCode = "404", description = "RDQ non trouvé"),
+        @ApiResponse(responseCode = "409", description = "RDQ clos - Modification impossible"),
+        @ApiResponse(responseCode = "500", description = "Erreur serveur")
+    })
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<?> modifierRdq(
+            @Parameter(description = "ID du RDQ à modifier") @PathVariable Long id,
+            @Valid @RequestBody UpdateRdqRequest updateRequest,
+            @AuthenticationPrincipal User currentUser) {
+        
+        try {
+            // Récupération de l'ID du manager depuis l'utilisateur authentifié
+            Long managerId = currentUser.getManager() != null ? 
+                currentUser.getManager().getIdManager() : null;
+            
+            if (managerId == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Utilisateur non associé à un profil manager"));
+            }
+
+            RdqResponse rdqResponse = rdqService.modifierRdq(id, updateRequest, managerId);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "RDQ modifié avec succès",
+                "data", rdqResponse
+            ));
+
+        } catch (RuntimeException e) {
+            // Gestion spécifique des différents types d'erreurs
+            String errorMessage = e.getMessage();
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+
+            if (errorMessage.contains("non trouvé")) {
+                status = HttpStatus.NOT_FOUND;
+            } else if (errorMessage.contains("clos") || errorMessage.contains("annulé")) {
+                status = HttpStatus.CONFLICT;
+            } else if (errorMessage.contains("propriétaire") || errorMessage.contains("droits")) {
+                status = HttpStatus.FORBIDDEN;
+            }
+
+            return ResponseEntity.status(status)
+                .body(Map.of(
+                    "success", false,
+                    "error", errorMessage
+                ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "success", false,
+                    "error", "Erreur interne du serveur"
+                ));
+        }
     }
 
     /**

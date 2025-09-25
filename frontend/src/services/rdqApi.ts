@@ -106,6 +106,45 @@ export class RdqApiService {
       throw error;
     }
   }
+
+  /**
+   * Modifie un RDQ existant (Manager uniquement)
+   */
+  static async updateRdq(rdqId: number, updateData: Partial<RDQ>): Promise<RdqDetailResponse> {
+    try {
+      const body = {
+        // Champs modifiables
+        ...(updateData.titre && { titre: updateData.titre }),
+        ...(updateData.dateHeure && { dateHeure: updateData.dateHeure }),
+        ...(updateData.adresse !== undefined && { adresse: updateData.adresse }),
+        ...(updateData.mode && { mode: updateData.mode }),
+        ...(updateData.description !== undefined && { description: updateData.description }),
+        ...(updateData.projet?.idProjet && { projetId: updateData.projet.idProjet }),
+        ...(updateData.collaborateurs && { 
+          collaborateurIds: updateData.collaborateurs.map(c => c.idCollaborateur) 
+        })
+      };
+
+      const response = await this.fetchWithAuth(`/rdq/${rdqId}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+        };
+      } else {
+        throw new Error(result.error || 'Erreur lors de la modification du RDQ');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la modification du RDQ:', error);
+      throw error;
+    }
+  }
 }
 
 /**
@@ -174,7 +213,7 @@ export const RdqStatusUtils = {
         rdq.projet?.client === clientFilter;
 
       // Filtre par historique
-      const matchesHistory = showHistory || !this.isHistorical(rdq.statut || '');
+      const matchesHistory = showHistory || !RdqStatusUtils.isHistorical(rdq.statut || '');
 
       return matchesSearch && matchesClient && matchesHistory;
     });
