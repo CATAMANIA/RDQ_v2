@@ -10,7 +10,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Calendar, MapPin, Phone, Mail, Navigation, FileText, User, Building, Clock, Lock } from 'lucide-react';
 import { RDQ } from '../types';
-import { mockCollaborateurs, mockClients, mockProjets } from '../data/mockData';
+// TODO TM-45: Import API data instead of mock data
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 

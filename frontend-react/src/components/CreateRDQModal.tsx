@@ -5,8 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { mockCollaborateurs, mockClients, mockProjets } from '../data/mockData';
 import { RDQ } from '../types';
+import { useManagerData } from '../hooks/useApiData';
 
 interface CreateRDQModalProps {
   onClose: () => void;
@@ -14,13 +14,31 @@ interface CreateRDQModalProps {
 }
 
 export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreate }) => {
+  const { data: apiData, loading } = useManagerData();
+  
+  // Gestion du chargement TM-45
+  if (loading) {
+    return (
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-lg">Chargement des données...</div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const collaborateurs = apiData?.collaborateurs || [];
+  const clients = apiData?.clients || [];
+  const projets: any[] = []; // TODO TM-45: Implémenter la gestion des projets via API
   const [formData, setFormData] = useState({
     titre: '',
     dateHeure: '',
     adresse: '',
-    mode: 'physique' as 'physique' | 'visio',
+    mode: 'PRESENTIEL' as 'PRESENTIEL' | 'DISTANCIEL' | 'HYBRIDE',
     indicationsManager: '',
-    statut: 'en_cours' as 'en_cours',
+    statut: 'EN_COURS' as 'EN_COURS',
     idManager: 1,
     idCollaborateur: 0,
     idClient: 0,
@@ -48,8 +66,8 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
       newErrors.idClient = 'Veuillez sélectionner un client';
     }
 
-    if (formData.mode === 'physique' && !formData.adresse.trim()) {
-      newErrors.adresse = 'L\'adresse est obligatoire pour un RDQ physique';
+    if (formData.mode === 'PRESENTIEL' && !formData.adresse.trim()) {
+      newErrors.adresse = 'L\'adresse est requise pour les RDQ en présentiel';
     }
 
     setErrors(newErrors);
@@ -65,7 +83,8 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
 
     onCreate({
       ...formData,
-      dateHeure: new Date(formData.dateHeure),
+      idRdq: 0, // Temporaire - sera assigné par l'API
+      dateHeure: formData.dateHeure,
       idProjet: formData.idProjet || undefined
     });
   };
@@ -112,13 +131,13 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
               <Label>Collaborateur *</Label>
               <Select 
                 value={formData.idCollaborateur > 0 ? formData.idCollaborateur.toString() : undefined} 
-                onValueChange={(value) => setFormData({ ...formData, idCollaborateur: parseInt(value) })}
+                onValueChange={(value: string) => setFormData({ ...formData, idCollaborateur: parseInt(value) })}
               >
                 <SelectTrigger className={errors.idCollaborateur ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Sélectionner un collaborateur" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCollaborateurs.map(collaborateur => (
+                  {collaborateurs.map((collaborateur: any) => (
                     <SelectItem key={collaborateur.id} value={collaborateur.id.toString()}>
                       {collaborateur.prenom} {collaborateur.nom}
                     </SelectItem>
@@ -132,13 +151,13 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
               <Label>Client *</Label>
               <Select 
                 value={formData.idClient > 0 ? formData.idClient.toString() : undefined} 
-                onValueChange={(value) => setFormData({ ...formData, idClient: parseInt(value) })}
+                onValueChange={(value: string) => setFormData({ ...formData, idClient: parseInt(value) })}
               >
                 <SelectTrigger className={errors.idClient ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Sélectionner un client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockClients.map(client => (
+                  {clients.map((client: any) => (
                     <SelectItem key={client.idClient} value={client.idClient.toString()}>
                       {client.nom}
                     </SelectItem>
@@ -154,14 +173,15 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
               <Label>Mode</Label>
               <Select 
                 value={formData.mode} 
-                onValueChange={(value) => setFormData({ ...formData, mode: value as 'physique' | 'visio' })}
+                onValueChange={(value: string) => setFormData({ ...formData, mode: value as 'PRESENTIEL' | 'DISTANCIEL' | 'HYBRIDE' })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="physique">Physique</SelectItem>
-                  <SelectItem value="visio">Visioconférence</SelectItem>
+                  <SelectItem value="PRESENTIEL">Présentiel</SelectItem>
+                  <SelectItem value="DISTANCIEL">Distanciel</SelectItem>
+                  <SelectItem value="HYBRIDE">Hybride</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -170,14 +190,14 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
               <Label>Projet</Label>
               <Select 
                 value={formData.idProjet > 0 ? formData.idProjet.toString() : "none"} 
-                onValueChange={(value) => setFormData({ ...formData, idProjet: value === "none" ? 0 : parseInt(value) })}
+                onValueChange={(value: string) => setFormData({ ...formData, idProjet: value === "none" ? 0 : parseInt(value) })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un projet (optionnel)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Aucun projet</SelectItem>
-                  {mockProjets.map(projet => (
+                  {projets.map((projet: any) => (
                     <SelectItem key={projet.idProjet} value={projet.idProjet.toString()}>
                       {projet.nom}
                     </SelectItem>
@@ -187,7 +207,7 @@ export const CreateRDQModal: React.FC<CreateRDQModalProps> = ({ onClose, onCreat
             </div>
           </div>
 
-          {formData.mode === 'physique' && (
+          {formData.mode === 'PRESENTIEL' && (
             <div className="space-y-2">
               <Label htmlFor="adresse">Adresse *</Label>
               <Textarea

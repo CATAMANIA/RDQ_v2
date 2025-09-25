@@ -18,13 +18,14 @@ import { SimpleCalendar } from './SimpleCalendar';
 import { SearchFilterPanel } from './search/SearchFilterPanel';
 import { SearchResults } from './search/SearchResults';
 import { useRdqSearch } from '../hooks/useRdqSearch';
-import { mockRDQs, mockCollaborateurs, mockClients } from '../data/mockData';
 import { RDQ } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useManagerData } from '../hooks/useApiData';
 
 export const ManagerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [rdqs, setRdqs] = useState<RDQ[]>(mockRDQs);
+  // TM-45: Remplacer les données mock par des appels API
+  const { data: apiData, loading, error, refetch } = useManagerData();
   const [selectedRDQ, setSelectedRDQ] = useState<RDQ | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBilanModal, setShowBilanModal] = useState(false);
@@ -32,6 +33,33 @@ export const ManagerDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCollaborateur, setFilterCollaborateur] = useState<string>('all');
   const [filterClient, setFilterClient] = useState<string>('all');
+
+  // Gestion du chargement et des erreurs TM-45
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Chargement des données...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="text-lg text-red-600">Erreur: {error}</div>
+        <button 
+          onClick={refetch}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  const rdqs = apiData?.rdqs || [];
+  const collaborateurs = apiData?.collaborateurs || [];
+  const clients = apiData?.clients || [];
   
   // États de pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,20 +124,16 @@ export const ManagerDashboard: React.FC = () => {
     setSelectedRDQ(newRDQ);
     setShowCreateModal(true);
   };  const handleUpdateRDQ = (updatedRDQ: RDQ) => {
-    setRdqs(rdqs.map(rdq => 
-      rdq.idRDQ === updatedRDQ.idRDQ 
-        ? { ...updatedRDQ, dateModification: new Date() }
-        : rdq
-    ));
+    // TODO TM-45: Implémenter l'API call pour mettre à jour la RDQ
+    console.log('Mise à jour de la RDQ:', updatedRDQ);
     setSelectedRDQ(null);
+    refetch(); // Actualiser les données après modification
   };
 
   const handleCloseRDQ = (rdqId: number) => {
-    setRdqs(rdqs.map(rdq => 
-      (rdq.idRDQ || rdq.idRdq) === rdqId 
-        ? { ...rdq, statut: 'CLOS' as const, dateCreation: new Date().toISOString() }
-        : rdq
-    ));
+    // TODO TM-45: Implémenter l'API call pour fermer la RDQ
+    console.log(`Fermeture de la RDQ ${rdqId}`);
+    refetch(); // Actualiser les données après modification
   };
 
   const rdqsEnCours = filteredRDQs.filter(rdq => rdq.statut === 'EN_COURS').length;
@@ -248,7 +272,7 @@ export const ManagerDashboard: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les collaborateurs</SelectItem>
-              {mockCollaborateurs.map(collaborateur => (
+              {collaborateurs.map((collaborateur: any) => (
                 <SelectItem key={collaborateur.id} value={collaborateur.id.toString()}>
                   {collaborateur.prenom} {collaborateur.nom}
                 </SelectItem>
@@ -268,7 +292,7 @@ export const ManagerDashboard: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les clients</SelectItem>
-              {mockClients.map(client => (
+              {clients.map((client: any) => (
                 <SelectItem key={client.idClient} value={client.idClient.toString()}>
                   {client.nom}
                 </SelectItem>

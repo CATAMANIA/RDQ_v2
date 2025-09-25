@@ -8,51 +8,83 @@ import { Search } from 'lucide-react';
 import { RDQCard } from './RDQCard';
 import { RDQModal } from './RDQModal';
 import { BilanModal } from './BilanModal';
-import { mockRDQs, mockClients } from '../data/mockData';
 import { RDQ } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useCollaborateurData } from '../hooks/useApiData';
 
 export const CollaborateurDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [rdqs, setRdqs] = useState<RDQ[]>(
-    mockRDQs.filter(rdq => rdq.idCollaborateur === user?.id)
-  );
+  const { data: apiData, loading, error, refetch } = useCollaborateurData();
   const [selectedRDQ, setSelectedRDQ] = useState<RDQ | null>(null);
   const [showBilanModal, setShowBilanModal] = useState(false);
   const [showHistorique, setShowHistorique] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
 
+  // Gestion du chargement et des erreurs TM-45
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Chargement des données...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="text-lg text-red-600">Erreur: {error}</div>
+        <button 
+          onClick={refetch}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  const rdqs = apiData?.rdqs?.filter(rdq => rdq.idCollaborateur === user?.id) || [];
+  const clients = apiData?.clients || [];
+
   // Filtrage des RDQ
   const filteredRDQs = rdqs.filter(rdq => {
-    const matchesSearch = rdq.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rdq.client.nom.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = rdq.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         rdq.client?.nom?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesClient = filterClient === 'all' || 
-                         rdq.idClient.toString() === filterClient;
+                         rdq.idClient?.toString() === filterClient;
     
-    const matchesStatut = showHistorique || rdq.statut === 'en_cours';
+    const matchesStatut = showHistorique || rdq.statut === 'EN_COURS';
     
     return matchesSearch && matchesClient && matchesStatut;
   });
 
   const handleUpdateBilan = (updatedRDQ: RDQ) => {
-    setRdqs(rdqs.map(rdq => 
-      rdq.idRDQ === updatedRDQ.idRDQ ? updatedRDQ : rdq
-    ));
+    // TODO TM-45: Implémenter l'API call pour mettre à jour le bilan
+    console.log('Mise à jour du bilan RDQ:', updatedRDQ);
+    refetch(); // Actualiser les données après modification
   };
 
-  const rdqsEnCours = filteredRDQs.filter(rdq => rdq.statut === 'en_cours').length;
-  const rdqsClos = filteredRDQs.filter(rdq => rdq.statut === 'clos').length;
+  const rdqsEnCours = filteredRDQs.filter(rdq => rdq.statut === 'EN_COURS').length;
+  const rdqsClos = filteredRDQs.filter(rdq => rdq.statut === 'CLOS').length;
   const rdqsAvecBilanManquant = filteredRDQs.filter(rdq => {
-    const isPassé = rdq.dateHeure < new Date();
-    const bilanCollaborateur = rdq.bilans.find(b => b.auteur === 'collaborateur');
-    return isPassé && !bilanCollaborateur && rdq.statut === 'en_cours';
+    const dateRDQ = rdq.dateHeure ? new Date(rdq.dateHeure) : new Date();
+    const isPassé = dateRDQ < new Date();
+    const bilanCollaborateur = rdq.bilans?.find(b => b.auteur === 'collaborateur');
+    return isPassé && !bilanCollaborateur && rdq.statut === 'EN_COURS';
   }).length;
 
   const rdqsProchains = filteredRDQs
-    .filter(rdq => rdq.dateHeure > new Date() && rdq.statut === 'en_cours')
-    .sort((a, b) => a.dateHeure.getTime() - b.dateHeure.getTime())
+    .filter(rdq => {
+      const dateRDQ = rdq.dateHeure ? new Date(rdq.dateHeure) : new Date();
+      return dateRDQ > new Date() && rdq.statut === 'EN_COURS';
+    })
+    .sort((a, b) => {
+      const dateA = a.dateHeure ? new Date(a.dateHeure) : new Date();
+      const dateB = b.dateHeure ? new Date(b.dateHeure) : new Date();
+      return dateA.getTime() - dateB.getTime();
+    })
     .slice(0, 3);
 
   return (
@@ -133,15 +165,15 @@ export const CollaborateurDashboard: React.FC = () => {
                   <div className="flex-1">
                     <p className="text-body-bold text-rdq-navy">{rdq.titre}</p>
                     <p className="text-body text-rdq-gray-dark">
-                      {rdq.client.nom} • {rdq.dateHeure.toLocaleDateString('fr-FR')} à {rdq.dateHeure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {rdq.client?.nom} • {rdq.dateHeure ? new Date(rdq.dateHeure).toLocaleDateString('fr-FR') : 'Date inconnue'} à {rdq.dateHeure ? new Date(rdq.dateHeure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                     </p>
                   </div>
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     transition={{ type: "spring", stiffness: 400 }}
                   >
-                    <Badge variant={rdq.mode === 'physique' ? 'default' : 'secondary'}>
-                      {rdq.mode === 'physique' ? 'Physique' : 'Visio'}
+                    <Badge variant={rdq.mode === 'PRESENTIEL' ? 'default' : 'secondary'}>
+                      {rdq.mode === 'PRESENTIEL' ? 'Présentiel' : rdq.mode === 'DISTANCIEL' ? 'Distanciel' : 'Hybride'}
                     </Badge>
                   </motion.div>
                 </div>
@@ -186,7 +218,7 @@ export const CollaborateurDashboard: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les clients</SelectItem>
-              {mockClients.map(client => (
+              {clients.map((client: any) => (
                 <SelectItem key={client.idClient} value={client.idClient.toString()}>
                   {client.nom}
                 </SelectItem>

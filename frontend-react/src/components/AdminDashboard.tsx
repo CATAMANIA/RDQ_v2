@@ -11,11 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarFallback, AvatarInitials } from './ui/avatar';
 import { Plus, Users, Building2, UserCheck, Search, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { mockManagers, mockCollaborateurs, mockClients, mockAdmins } from '../data/mockData';
 import { User, Client } from '../types';
 import { UserModal } from './UserModal';
 import { ClientModal } from './ClientModal';
 import { PrivacyManager } from './PrivacyManager';
+import { useAdminData } from '../hooks/useApiData';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,8 +33,9 @@ const itemVariants = {
 };
 
 export const AdminDashboard: React.FC = () => {
-  const [allUsers] = useState<User[]>([...mockAdmins, ...mockManagers, ...mockCollaborateurs]);
-  const [allClients] = useState<Client[]>(mockClients);
+  // TM-45: Remplacer les données mock par des appels API
+  const { data: apiData, loading, error, refetch } = useAdminData();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserType, setSelectedUserType] = useState<'all' | 'admin' | 'manager' | 'collaborateur'>('all');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -42,10 +43,36 @@ export const AdminDashboard: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
+  // Gestion du chargement et des erreurs
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Chargement des données...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="text-lg text-red-600">Erreur: {error}</div>
+        <button 
+          onClick={refetch}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  const allUsers = apiData ? [...apiData.admins, ...apiData.managers, ...apiData.collaborateurs] : [];
+  const allClients = apiData?.clients || [];
+
   const filteredUsers = allUsers.filter(user => {
     const matchesSearch = `${user.prenom} ${user.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedUserType === 'all' || user.role === selectedUserType;
+    const matchesType = selectedUserType === 'all' || user.role.toLowerCase() === selectedUserType;
     return matchesSearch && matchesType;
   });
 
@@ -115,7 +142,7 @@ export const AdminDashboard: React.FC = () => {
           <CardContent>
             <div className="text-h2">{allUsers.length}</div>
             <p className="text-xs text-rdq-gray-dark">
-              {mockAdmins.length} admin • {mockManagers.length} managers • {mockCollaborateurs.length} collaborateurs
+              {apiData?.admins.length || 0} admin • {apiData?.managers.length || 0} managers • {apiData?.collaborateurs.length || 0} collaborateurs
             </p>
           </CardContent>
         </Card>
@@ -137,7 +164,7 @@ export const AdminDashboard: React.FC = () => {
             <UserCheck className="h-4 w-4 text-rdq-blue-dark" />
           </CardHeader>
           <CardContent>
-            <div className="text-h2">{mockManagers.length}</div>
+            <div className="text-h2">{apiData?.managers.length || 0}</div>
             <p className="text-xs text-rdq-gray-dark">Gérant des RDQ</p>
           </CardContent>
         </Card>
@@ -148,7 +175,7 @@ export const AdminDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-rdq-blue-light" />
           </CardHeader>
           <CardContent>
-            <div className="text-h2">{mockCollaborateurs.length}</div>
+            <div className="text-h2">{apiData?.collaborateurs.length || 0}</div>
             <p className="text-xs text-rdq-gray-dark">Exécutant les entretiens</p>
           </CardContent>
         </Card>
