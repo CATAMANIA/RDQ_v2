@@ -1,6 +1,7 @@
 package com.vibecoding.rdq.service;
 
 import com.vibecoding.rdq.entity.User;
+import com.vibecoding.rdq.enums.Role;
 import com.vibecoding.rdq.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class UserService {
     }
 
     public List<User> findByRole(String role) {
-        return userRepository.findByRole(role);
+        return userRepository.findByRole(Role.valueOf(role));
     }
 
     public User save(User user) {
@@ -39,7 +40,7 @@ public class UserService {
     }
 
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(email).orElse(null);
     }
 
     /**
@@ -48,15 +49,15 @@ public class UserService {
     public void initializeTestData() {
         if (userRepository.count() == 0) {
             // Admin équivalent à mockAdmins
-            userRepository.save(new User(null, "Admin", "Système", "admin@rdq.com", "01.00.00.00.00", "ADMIN"));
+            userRepository.save(new User("Admin", "Système", "admin@rdq.com", Role.ADMIN));
             
             // Managers équivalents à mockManagers
-            userRepository.save(new User(null, "Dupont", "Jean", "manager@example.com", "01.23.45.67.89", "MANAGER"));
-            userRepository.save(new User(null, "Rousseau", "Marie", "marie.rousseau@example.com", "01.22.33.44.55", "MANAGER"));
+            userRepository.save(new User("Dupont", "Jean", "manager@example.com", Role.MANAGER));
+            userRepository.save(new User("Rousseau", "Marie", "marie.rousseau@example.com",  Role.MANAGER));
             
             // Collaborateurs équivalents à mockCollaborateurs
-            userRepository.save(new User(null, "Martin", "Sophie", "collaborateur@example.com", "01.98.76.54.32", "COLLABORATEUR"));
-            userRepository.save(new User(null, "Bernard", "Pierre", "pierre.bernard@example.com", "01.11.22.33.44", "COLLABORATEUR"));
+            userRepository.save(new User("Martin", "Sophie", "collaborateur@example.com",  Role.COLLABORATEUR));
+            userRepository.save(new User( "Bernard", "Pierre", "pierre.bernard@example.com", Role.COLLABORATEUR));
         }
     }
 }

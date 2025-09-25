@@ -1,6 +1,7 @@
 package com.vibecoding.rdq.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -27,6 +28,43 @@ public class Client {
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Projet> projets = new ArrayList<>();
+
+    @NotBlank(message = "L'email est obligatoire")
+    @Email(message = "L'email doit être valide")
+    @Column(name = "email", nullable = false, unique = true)
+    private String contactEmail;
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    @Size(max = 20, message = "Le téléphone ne peut pas dépasser 20 caractères")
+    @Column(name = "telephone", length = 20)
+    private String contactTelephone;
+
+    public Client(Long idClient,
+            @NotBlank(message = "Le nom du client est obligatoire") @Size(max = 200, message = "Le nom du client ne peut pas dépasser 200 caractères") String nom,
+            @Size(max = 100, message = "Le contact ne peut pas dépasser 100 caractères") String contact,@Size(max = 20, message = "Le téléphone ne peut pas dépasser 20 caractères") String contactTelephone,
+            @NotBlank(message = "L'email est obligatoire") @Email(message = "L'email doit être valide") String contactEmail
+            ) {
+        this.idClient = idClient;
+        this.nom = nom;
+        this.contact = contact;
+        this.contactEmail = contactEmail;
+        this.contactTelephone = contactTelephone;
+    }
+
+    public String getContactTelephone() {
+        return contactTelephone;
+    }
+
+    public void setContactTelephone(String contactTelephone) {
+        this.contactTelephone = contactTelephone;
+    }
 
     // Constructors
     public Client() {}

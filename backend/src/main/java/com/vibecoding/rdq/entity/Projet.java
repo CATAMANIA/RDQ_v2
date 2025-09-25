@@ -28,6 +28,12 @@ public class Projet {
     @OneToMany(mappedBy = "projet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RDQ> rdqs = new ArrayList<>();
 
+    public Projet(Long idProjet,
+            @NotBlank(message = "Le nom du projet est obligatoire") @Size(max = 200, message = "Le nom du projet ne peut pas dépasser 200 caractères") String nom) {
+        this.idProjet = idProjet;
+        this.nom = nom;
+    }
+
     // Constructors
     public Projet() {}
 
