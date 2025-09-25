@@ -4,6 +4,8 @@ import com.vibecoding.rdq.dto.CreateRdqRequest;
 import com.vibecoding.rdq.dto.DocumentResponse;
 import com.vibecoding.rdq.dto.RdqResponse;
 import com.vibecoding.rdq.dto.UpdateRdqRequest;
+import com.vibecoding.rdq.dto.RdqSearchCriteria;
+import com.vibecoding.rdq.dto.RdqSearchResponse;
 import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.entity.Manager;
 import com.vibecoding.rdq.entity.Collaborateur;
@@ -13,7 +15,13 @@ import com.vibecoding.rdq.repository.RDQRepository;
 import com.vibecoding.rdq.repository.ManagerRepository;
 import com.vibecoding.rdq.repository.CollaborateurRepository;
 import com.vibecoding.rdq.repository.ProjetRepository;
+import com.vibecoding.rdq.repository.RdqSpecifications;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -498,10 +506,178 @@ public class RDQService {
         // 9. Sauvegarde en base de données
         RDQ savedRdq = rdqRepository.save(rdq);
 
-        // 10. TODO: Envoyer notifications aux collaborateurs des changements
-        sendNotificationToCollaborateurs(savedRdq, savedRdq.getCollaborateurs());
-
-        // 11. Conversion en DTO de réponse
+        // 10. Retour de la réponse mappée
         return mapToRdqResponse(savedRdq);
+    }
+
+    // ========== Nouvelles méthodes pour TM-41 - Recherche et filtrage avancé ==========
+
+    /**
+     * Recherche paginée avec critères multiples
+     * Implémentation pour TM-41 - US09 Historique et filtrage des RDQ
+     */
+    @Transactional(readOnly = true)
+    public RdqSearchResponse searchRdqs(RdqSearchCriteria criteria) {
+        long startTime = System.currentTimeMillis();
+
+        // 1. Validation et préparation des critères
+        if (criteria == null) {
+            criteria = RdqSearchCriteria.builder().build();
+        }
+
+        // 2. Création de la pagination avec tri
+        Sort sort = createSort(criteria.getSortBy(), criteria.getSortDirection());
+        Pageable pageable = PageRequest.of(
+            criteria.getPage() != null ? criteria.getPage() : 0,
+            criteria.getSize() != null ? criteria.getSize() : 10,
+            sort
+        );
+
+        // 3. Création de la spécification dynamique
+        Specification<RDQ> specification = RdqSpecifications.createSpecification(criteria);
+
+        // 4. Exécution de la recherche
+        Page<RDQ> rdqPage = rdqRepository.findAll(specification, pageable);
+
+        // 5. Mapping vers DTOs
+        List<RdqResponse> rdqResponses = rdqPage.getContent().stream()
+            .map(this::mapToRdqResponse)
+            .collect(Collectors.toList());
+
+        // 6. Calcul des statistiques
+        RdqSearchResponse.RdqSearchStats stats = calculateSearchStats(criteria);
+
+        // 7. Construction de la réponse
+        long searchDuration = System.currentTimeMillis() - startTime;
+
+        return RdqSearchResponse.builder()
+            .rdqs(rdqResponses)
+            .currentPage(rdqPage.getNumber())
+            .totalPages(rdqPage.getTotalPages())
+            .pageSize(rdqPage.getSize())
+            .totalElements(rdqPage.getTotalElements())
+            .appliedCriteria(criteria)
+            .appliedFiltersDescription(criteria.getAppliedFiltersDescription())
+            .searchDuration(searchDuration)
+            .stats(stats)
+            .build();
+    }
+
+    /**
+     * Recherche spécialisée pour les managers
+     */
+    @Transactional(readOnly = true)
+    public RdqSearchResponse searchRdqsForManager(Long managerId, RdqSearchCriteria criteria) {
+        if (criteria == null) {
+            criteria = RdqSearchCriteria.builder().build();
+        }
+        
+        // Forcer le filtrage par manager
+        criteria.setManagerId(managerId);
+        criteria.setMyRdqsOnly(true);
+        
+        return searchRdqs(criteria);
+    }
+
+    /**
+     * Recherche spécialisée pour les collaborateurs
+     */
+    @Transactional(readOnly = true)
+    public RdqSearchResponse searchAssignmentsForCollaborateur(Long collaborateurId, RdqSearchCriteria criteria) {
+        if (criteria == null) {
+            criteria = RdqSearchCriteria.builder().build();
+        }
+        
+        // Forcer le filtrage par collaborateur
+        criteria.setCollaborateurId(collaborateurId);
+        criteria.setMyAssignmentsOnly(true);
+        
+        return searchRdqs(criteria);
+    }
+
+    /**
+     * Créer un objet Sort basé sur les critères
+     */
+    private Sort createSort(String sortBy, String sortDirection) {
+        String field = (sortBy != null && !sortBy.trim().isEmpty()) ? sortBy : "dateHeure";
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection) 
+            ? Sort.Direction.ASC : Sort.Direction.DESC;
+        
+        // Mapping des noms de champs pour la sécurité
+        switch (field) {
+            case "titre":
+                return Sort.by(direction, "titre");
+            case "statut":
+                return Sort.by(direction, "statut");
+            case "client":
+                return Sort.by(direction, "projet.client.nom");
+            case "collaborateur":
+                return Sort.by(direction, "collaborateurs.nom");
+            case "dateCreation":
+                return Sort.by(direction, "dateCreation");
+            default:
+                return Sort.by(direction, "dateHeure");
+        }
+    }
+
+    /**
+     * Calcule les statistiques pour les résultats de recherche
+     */
+    private RdqSearchResponse.RdqSearchStats calculateSearchStats(RdqSearchCriteria criteria) {
+        // Récupération des statistiques générales
+        Object[] stats = rdqRepository.getStatsByManager(criteria.getManagerId());
+        
+        if (stats != null && stats.length >= 6) {
+            return RdqSearchResponse.RdqSearchStats.builder()
+                .totalRdqs((Long) stats[0])
+                .rdqsPlanifies((Long) stats[1])
+                .rdqsEnCours((Long) stats[2])
+                .rdqsTermines((Long) stats[3])
+                .rdqsAnnules((Long) stats[4])
+                .rdqsClos((Long) stats[5])
+                // TODO: Ajouter statistiques par mode et temporelles si nécessaires
+                .build();
+        }
+        
+        return RdqSearchResponse.RdqSearchStats.builder()
+            .totalRdqs(0L)
+            .rdqsPlanifies(0L)
+            .rdqsEnCours(0L)
+            .rdqsTermines(0L)
+            .rdqsAnnules(0L)
+            .rdqsClos(0L)
+            .build();
+    }
+
+    /**
+     * Export des RDQ selon critères (pour futur développement)
+     */
+    @Transactional(readOnly = true)
+    public List<RdqResponse> exportRdqs(RdqSearchCriteria criteria) {
+        // Pour l'export, on désactive la pagination
+        RdqSearchCriteria exportCriteria = RdqSearchCriteria.builder()
+            .clientNom(criteria.getClientNom())
+            .clientId(criteria.getClientId())
+            .collaborateurNom(criteria.getCollaborateurNom())
+            .collaborateurId(criteria.getCollaborateurId())
+            .managerId(criteria.getManagerId())
+            .projetNom(criteria.getProjetNom())
+            .projetId(criteria.getProjetId())
+            .statuts(criteria.getStatuts())
+            .modes(criteria.getModes())
+            .dateDebut(criteria.getDateDebut())
+            .dateFin(criteria.getDateFin())
+            .searchTerm(criteria.getSearchTerm())
+            .includeHistory(criteria.getIncludeHistory())
+            .myRdqsOnly(criteria.getMyRdqsOnly())
+            .myAssignmentsOnly(criteria.getMyAssignmentsOnly())
+            .page(0)
+            .size(1000) // Limite raisonnable pour l'export
+            .sortBy(criteria.getSortBy())
+            .sortDirection(criteria.getSortDirection())
+            .build();
+
+        RdqSearchResponse searchResponse = searchRdqs(exportCriteria);
+        return searchResponse.getRdqs();
     }
 }

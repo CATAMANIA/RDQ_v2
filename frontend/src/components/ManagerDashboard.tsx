@@ -10,10 +10,13 @@ import { RDQCard } from './RDQCard';
 import { RDQModal } from './RDQModal';
 import { CreateRDQModal } from './CreateRDQModal';
 import { BilanModal } from './BilanModal';
-import { AnimatedGrid } from './AnimatedGrid';
+
 import { PaginationControls } from './ui/pagination-controls';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { SimpleCalendar } from './SimpleCalendar';
+import { SearchFilterPanel } from './search/SearchFilterPanel';
+import { SearchResults } from './search/SearchResults';
+import { useRdqSearch } from '../hooks/useRdqSearch';
 import { mockRDQs, mockCollaborateurs, mockClients } from '../data/mockData';
 import { RDQ } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,64 +37,64 @@ export const ManagerDashboard: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState('list');
 
-  // Filtrage et pagination des RDQ
-  const { filteredRDQs, paginatedRDQs, totalPages } = useMemo(() => {
-    // Filtrage
-    const filtered = rdqs.filter(rdq => {
-      const matchesSearch = rdq.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           rdq.client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           rdq.collaborateur.nom.toLowerCase().includes(searchTerm.toLowerCase());
+  // Hook de recherche avancée pour TM-41
+  const rdqSearch = useRdqSearch({
+    managerId: user?.id,
+    page: 0,
+    size: 10,
+    sortBy: 'dateHeure',
+    sortDirection: 'DESC'
+  });
+
+  // Filtrage des RDQ
+  const filteredRDQs = useMemo(() => {
+    return rdqs.filter(rdq => {
+      const matchesSearch = searchTerm === '' ||
+                           rdq.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (rdq.client?.nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (rdq.collaborateurs?.[0]?.nom || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCollaborateur = filterCollaborateur === 'all' || 
-                                  rdq.idCollaborateur.toString() === filterCollaborateur;
+      const matchesCollaborateur = filterCollaborateur === 'all' ||
+                                  (rdq.idCollaborateur || rdq.collaborateurs?.[0]?.idCollaborateur)?.toString() === filterCollaborateur;
       
-      const matchesClient = filterClient === 'all' || 
-                           rdq.idClient.toString() === filterClient;
+      const matchesClient = filterClient === 'all' ||
+                           (rdq.idClient || rdq.projet?.idProjet)?.toString() === filterClient;
       
-      const matchesStatut = showHistorique || rdq.statut === 'en_cours';
-      
+      const matchesStatut = showHistorique || rdq.statut === 'EN_COURS';
+
       return matchesSearch && matchesCollaborateur && matchesClient && matchesStatut;
     });
+  }, [rdqs, searchTerm, filterCollaborateur, filterClient, showHistorique]);
 
-    // Pagination
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginated = filtered.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-    return {
-      filteredRDQs: filtered,
-      paginatedRDQs: paginated,
-      totalPages
-    };
-  }, [rdqs, searchTerm, filterCollaborateur, filterClient, showHistorique, currentPage, itemsPerPage]);
+  // Calcul de pagination
+  const totalPages = Math.ceil(filteredRDQs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRDQs = filteredRDQs.slice(startIndex, startIndex + itemsPerPage);
 
   // Réinitialiser la page lors du changement de filtres
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterCollaborateur, filterClient, showHistorique]);
 
-  const handleCreateRDQ = (newRDQ: Omit<RDQ, 'idRDQ' | 'dateCreation' | 'dateModification' | 'manager' | 'collaborateur' | 'client' | 'projet' | 'documents' | 'bilans'>) => {
-    const collaborateur = mockCollaborateurs.find(c => c.id === newRDQ.idCollaborateur)!;
-    const client = mockClients.find(c => c.idClient === newRDQ.idClient)!;
-    
-    const rdq: RDQ = {
-      ...newRDQ,
-      idRDQ: Math.max(...rdqs.map(r => r.idRDQ)) + 1,
-      dateCreation: new Date(),
-      dateModification: new Date(),
-      manager: user!,
-      collaborateur,
-      client,
-      documents: [],
-      bilans: []
+  const handleCreateRDQ = () => {
+    const maxId = Math.max(...rdqs.map(r => r.idRDQ || r.idRdq || 0), 0);
+    const newRDQ: RDQ = {
+      idRdq: maxId + 1,
+      idRDQ: maxId + 1, // Legacy compatibility
+      dateCreation: new Date().toISOString(),
+      titre: '',
+      manager: {
+        idManager: user!.id,
+        nom: user!.nom,
+        email: user!.email
+      },
+      statut: 'PLANIFIE',
+      dateHeure: '',
+      mode: 'PRESENTIEL'
     };
-    
-    setRdqs([rdq, ...rdqs]);
-    setShowCreateModal(false);
-  };
-
-  const handleUpdateRDQ = (updatedRDQ: RDQ) => {
+    setSelectedRDQ(newRDQ);
+    setShowCreateModal(true);
+  };  const handleUpdateRDQ = (updatedRDQ: RDQ) => {
     setRdqs(rdqs.map(rdq => 
       rdq.idRDQ === updatedRDQ.idRDQ 
         ? { ...updatedRDQ, dateModification: new Date() }
@@ -102,18 +105,18 @@ export const ManagerDashboard: React.FC = () => {
 
   const handleCloseRDQ = (rdqId: number) => {
     setRdqs(rdqs.map(rdq => 
-      rdq.idRDQ === rdqId 
-        ? { ...rdq, statut: 'clos' as const, dateModification: new Date() }
+      (rdq.idRDQ || rdq.idRdq) === rdqId 
+        ? { ...rdq, statut: 'CLOS' as const, dateCreation: new Date().toISOString() }
         : rdq
     ));
   };
 
-  const rdqsEnCours = filteredRDQs.filter(rdq => rdq.statut === 'en_cours').length;
-  const rdqsClos = filteredRDQs.filter(rdq => rdq.statut === 'clos').length;
+  const rdqsEnCours = filteredRDQs.filter(rdq => rdq.statut === 'EN_COURS').length;
+  const rdqsClos = filteredRDQs.filter(rdq => rdq.statut === 'CLOS').length;
   const rdqsAvecBilanManquant = filteredRDQs.filter(rdq => {
-    const isPassé = rdq.dateHeure < new Date();
-    const bilanCollaborateur = rdq.bilans.find(b => b.auteur === 'collaborateur');
-    const bilanManager = rdq.bilans.find(b => b.auteur === 'manager');
+    const isPassé = new Date(rdq.dateHeure) < new Date();
+    const bilanCollaborateur = rdq.bilans?.find(b => b.auteur === 'collaborateur');
+    const bilanManager = rdq.bilans?.find(b => b.auteur === 'manager');
     return isPassé && (!bilanCollaborateur || !bilanManager);
   }).length;
 
@@ -279,13 +282,20 @@ export const ManagerDashboard: React.FC = () => {
         transition={{ duration: 0.4, delay: 0.9 }}
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-white border border-rdq-gray-light/50">
+          <TabsList className="grid w-full grid-cols-3 mb-6 bg-white border border-rdq-gray-light/50">
             <TabsTrigger 
               value="list" 
               className="flex items-center gap-2 text-rdq-gray-dark data-[state=active]:bg-rdq-blue-dark data-[state=active]:text-white data-[state=active]:border-rdq-blue-dark hover:bg-rdq-gray-light/10 transition-all duration-200"
             >
               <Filter className="h-4 w-4" />
               Liste des RDQ
+            </TabsTrigger>
+            <TabsTrigger 
+              value="search"
+              className="flex items-center gap-2 text-rdq-gray-dark data-[state=active]:bg-rdq-blue-dark data-[state=active]:text-white data-[state=active]:border-rdq-blue-dark hover:bg-rdq-gray-light/10 transition-all duration-200"
+            >
+              <Search className="h-4 w-4" />
+              Recherche avancée
             </TabsTrigger>
             <TabsTrigger 
               value="calendar"
@@ -368,6 +378,26 @@ export const ManagerDashboard: React.FC = () => {
                 <p className="text-rdq-gray-dark">Aucun RDQ trouvé avec les filtres actuels.</p>
               </motion.div>
             )}
+          </TabsContent>
+
+          <TabsContent value="search" className="space-y-6">
+            {/* TM-41 - Recherche avancée et filtrage des RDQ */}
+            <SearchFilterPanel
+              onSearch={rdqSearch.search}
+              onClear={rdqSearch.clearSearch}
+              isLoading={rdqSearch.isLoading}
+              initialCriteria={rdqSearch.searchCriteria}
+            />
+            
+            <SearchResults
+              rdqs={rdqSearch.rdqs}
+              searchResponse={rdqSearch.searchResponse}
+              isLoading={rdqSearch.isLoading}
+              error={rdqSearch.error}
+              onPageChange={rdqSearch.goToPage}
+              onPageSizeChange={rdqSearch.setPageSize}
+              onRdqClick={(rdq) => setSelectedRDQ(rdq)}
+            />
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-6">
