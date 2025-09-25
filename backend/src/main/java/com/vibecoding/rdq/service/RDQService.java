@@ -75,6 +75,13 @@ public class RDQService {
     }
 
     /**
+     * Récupère l'entité RDQ complète pour les intégrations externes
+     */
+    public Optional<RDQ> findRdqEntityById(Long id) {
+        return rdqRepository.findByIdWithAllRelations(id);
+    }
+
+    /**
      * Crée un nouveau RDQ avec validation complète
      * @param request Données de création du RDQ
      * @param managerId ID du manager créateur (obtenu depuis le contexte de sécurité)
