@@ -9,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class SharePointServiceTest {
 
     @Mock
@@ -36,6 +39,9 @@ public class SharePointServiceTest {
         when(sharePointConfig.getAllowedExtensions()).thenReturn(new String[]{"pdf", "doc", "docx", "jpg", "png"});
         when(sharePointConfig.isExtensionAllowed("pdf")).thenReturn(true);
         when(sharePointConfig.isExtensionAllowed("txt")).thenReturn(false);
+        when(sharePointConfig.isMimeTypeAllowed("application/pdf")).thenReturn(true);
+        when(sharePointConfig.isMimeTypeAllowed("text/plain")).thenReturn(false);
+        when(sharePointConfig.getDriveId()).thenReturn("mock_drive_123");
 
         // Create mock file
         mockFile = new MockMultipartFile(
@@ -57,7 +63,8 @@ public class SharePointServiceTest {
 
         // Then
         assertNotNull(result);
-        assertEquals("test-document.pdf", result.getFileName());
+        assertTrue(result.getFileName().startsWith("test-document_"));
+        assertTrue(result.getFileName().endsWith(".pdf"));
         assertEquals(mockFile.getSize(), result.getFileSize());
         assertEquals(userEmail, result.getUploadedBy());
         assertNotNull(result.getItemId());

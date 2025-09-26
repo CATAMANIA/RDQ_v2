@@ -84,7 +84,7 @@ public class UserController {
         if (!userService.findById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        user.setId(id);
+        user.setIdUser(id);
         User updatedUser = userService.save(user);
         return ResponseEntity.ok(updatedUser);
     }

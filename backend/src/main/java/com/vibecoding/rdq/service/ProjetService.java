@@ -38,20 +38,5 @@ public class ProjetService {
         projetRepository.deleteById(id);
     }
 
-    /**
-     * Initialise les données de test (équivalent des mock)
-     */
-    public void initializeTestData() {
-        if (projetRepository.count() == 0) {
-            // Données équivalentes à mockProjets
-            projetRepository.save(new Projet(null, "Migration Cloud"));
-            projetRepository.save(new Projet(null, "Appel d'offre AO-2024-001"));
-            projetRepository.save(new Projet(null, "Développement mobile"));
-            projetRepository.save(new Projet(null, "Refonte site web"));
-            projetRepository.save(new Projet(null, "Audit de sécurité"));
-            projetRepository.save(new Projet(null, "Formation équipe"));
-            projetRepository.save(new Projet(null, "Support technique"));
-            projetRepository.save(new Projet(null, "Intégration API"));
-        }
-    }
+
 }

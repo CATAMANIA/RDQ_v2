@@ -3,11 +3,11 @@ package com.vibecoding.rdq.controller;
 import com.vibecoding.rdq.entity.User;
 import com.vibecoding.rdq.entity.Client;
 import com.vibecoding.rdq.entity.Projet;
-import com.vibecoding.rdq.entity.Rdq;
+import com.vibecoding.rdq.entity.RDQ;
 import com.vibecoding.rdq.service.UserService;
 import com.vibecoding.rdq.service.ClientService;
 import com.vibecoding.rdq.service.ProjetService;
-import com.vibecoding.rdq.service.RdqService;
+import com.vibecoding.rdq.service.RDQService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +35,7 @@ public class MockDataController {
     private ProjetService projetService;
 
     @Autowired
-    private RdqService rdqService;
+    private RDQService rdqService;
 
     /**
      * Récupérer toutes les données nécessaires au frontend en une seule requête
@@ -111,27 +111,5 @@ public class MockDataController {
         return ResponseEntity.ok(data);
     }
 
-    /**
-     * Initialiser les données de test si nécessaire
-     */
-    @PostMapping("/initialize")
-    public ResponseEntity<Map<String, String>> initializeTestData() {
-        try {
-            userService.initializeTestData();
-            clientService.initializeTestData();
-            projetService.initializeTestData();
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "Données de test initialisées avec succès");
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Erreur lors de l'initialisation: " + e.getMessage());
-            
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
+
 }

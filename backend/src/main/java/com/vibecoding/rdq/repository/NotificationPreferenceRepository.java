@@ -58,9 +58,20 @@ public interface NotificationPreferenceRepository extends JpaRepository<Notifica
 
     /**
      * Trouve les types de notifications non configurés pour un utilisateur
+     * Utilise une requête native car TypeNotification est un enum
      */
-    @Query("SELECT t FROM TypeNotification t WHERE t NOT IN (SELECT np.notificationType FROM NotificationPreference np WHERE np.user = :user)")
-    List<TypeNotification> findUnconfiguredTypesForUser(@Param("user") User user);
+    default List<TypeNotification> findUnconfiguredTypesForUser(User user) {
+        // Récupère tous les types configurés pour l'utilisateur
+        List<TypeNotification> configuredTypes = findNotificationTypesByUser(user);
+        
+        // Retourne tous les types qui ne sont pas configurés
+        return java.util.Arrays.stream(TypeNotification.values())
+                .filter(type -> !configuredTypes.contains(type))
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    @Query("SELECT np.notificationType FROM NotificationPreference np WHERE np.user = :user")
+    List<TypeNotification> findNotificationTypesByUser(@Param("user") User user);
 
     /**
      * Compte le nombre total de préférences d'un utilisateur
