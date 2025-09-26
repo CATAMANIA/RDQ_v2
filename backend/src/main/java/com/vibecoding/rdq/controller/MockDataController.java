@@ -111,27 +111,5 @@ public class MockDataController {
         return ResponseEntity.ok(data);
     }
 
-    /**
-     * Initialiser les données de test si nécessaire
-     */
-    @PostMapping("/initialize")
-    public ResponseEntity<Map<String, String>> initializeTestData() {
-        try {
-            userService.initializeTestData();
-            clientService.initializeTestData();
-            projetService.initializeTestData();
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "Données de test initialisées avec succès");
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", "Erreur lors de l'initialisation: " + e.getMessage());
-            
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
+
 }

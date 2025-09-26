@@ -42,6 +42,9 @@ public class RDQ {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "indications", columnDefinition = "TEXT")
+    private String indications;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_manager", nullable = false)
     private Manager manager;
@@ -144,6 +147,14 @@ public class RDQ {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getIndications() {
+        return indications;
+    }
+
+    public void setIndications(String indications) {
+        this.indications = indications;
     }
 
     public Manager getManager() {

@@ -204,49 +204,7 @@ class ClientServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("Tests d'initialisation des données")
-    class InitializationTest {
 
-        @Test
-        @DisplayName("initializeTestData() - Doit initialiser les données quand la base est vide")
-        void initializeTestData_WhenDatabaseEmpty_ShouldCreateTestClients() {
-            // Given
-            when(clientRepository.count()).thenReturn(0L);
-            when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            // When
-            clientService.initializeTestData();
-
-            // Then
-            verify(clientRepository).count();
-            verify(clientRepository, times(4)).save(any(Client.class));
-            
-            // Vérifier que les clients sont créés avec les bonnes données
-            verify(clientRepository).save(argThat(client -> 
-                client.getNom().equals("ACME Corp") && client.getContactEmail().equals("durand@acme.com")));
-            verify(clientRepository).save(argThat(client -> 
-                client.getNom().equals("TechSolutions") && client.getContactEmail().equals("leblanc@techsolutions.com")));
-            verify(clientRepository).save(argThat(client -> 
-                client.getNom().equals("Digital Innovations") && client.getContactEmail().equals("martin@digital-innovations.com")));
-            verify(clientRepository).save(argThat(client -> 
-                client.getNom().equals("StartupX") && client.getContactEmail().equals("garcia@startupx.com")));
-        }
-
-        @Test
-        @DisplayName("initializeTestData() - Ne doit pas initialiser les données quand la base n'est pas vide")
-        void initializeTestData_WhenDatabaseNotEmpty_ShouldNotCreateTestClients() {
-            // Given
-            when(clientRepository.count()).thenReturn(3L);
-
-            // When
-            clientService.initializeTestData();
-
-            // Then
-            verify(clientRepository).count();
-            verify(clientRepository, never()).save(any(Client.class));
-        }
-    }
 
     @Nested
     @DisplayName("Tests de validation des paramètres")

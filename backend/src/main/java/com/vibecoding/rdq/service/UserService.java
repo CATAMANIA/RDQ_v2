@@ -43,21 +43,4 @@ public class UserService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
-    /**
-     * Initialise les données de test (équivalent des mock)
-     */
-    public void initializeTestData() {
-        if (userRepository.count() == 0) {
-            // Admin équivalent à mockAdmins
-            userRepository.save(new User("Admin", "Système", "admin@rdq.com", Role.ADMIN));
-            
-            // Managers équivalents à mockManagers
-            userRepository.save(new User("Dupont", "Jean", "manager@example.com", Role.MANAGER));
-            userRepository.save(new User("Rousseau", "Marie", "marie.rousseau@example.com",  Role.MANAGER));
-            
-            // Collaborateurs équivalents à mockCollaborateurs
-            userRepository.save(new User("Martin", "Sophie", "collaborateur@example.com",  Role.COLLABORATEUR));
-            userRepository.save(new User( "Bernard", "Pierre", "pierre.bernard@example.com", Role.COLLABORATEUR));
-        }
-    }
 }

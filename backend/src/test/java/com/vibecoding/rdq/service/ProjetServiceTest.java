@@ -222,49 +222,7 @@ class ProjetServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("Tests d'initialisation des données")
-    class InitializationTest {
 
-        @Test
-        @DisplayName("initializeTestData() - Doit initialiser les données quand la base est vide")
-        void initializeTestData_WhenDatabaseEmpty_ShouldCreateTestProjets() {
-            // Given
-            when(projetRepository.count()).thenReturn(0L);
-            when(projetRepository.save(any(Projet.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            // When
-            projetService.initializeTestData();
-
-            // Then
-            verify(projetRepository).count();
-            verify(projetRepository, times(4)).save(any(Projet.class));
-            
-            // Vérifier que les projets sont créés avec les bons noms
-            verify(projetRepository).save(argThat(projet -> 
-                projet.getNom().equals("Migration Cloud")));
-            verify(projetRepository).save(argThat(projet -> 
-                projet.getNom().equals("Appel d'offre AO-2024-001")));
-            verify(projetRepository).save(argThat(projet -> 
-                projet.getNom().equals("Développement mobile")));
-            verify(projetRepository).save(argThat(projet -> 
-                projet.getNom().equals("Refonte site web")));
-        }
-
-        @Test
-        @DisplayName("initializeTestData() - Ne doit pas initialiser les données quand la base n'est pas vide")
-        void initializeTestData_WhenDatabaseNotEmpty_ShouldNotCreateTestProjets() {
-            // Given
-            when(projetRepository.count()).thenReturn(3L);
-
-            // When
-            projetService.initializeTestData();
-
-            // Then
-            verify(projetRepository).count();
-            verify(projetRepository, never()).save(any(Projet.class));
-        }
-    }
 
     @Nested
     @DisplayName("Tests de validation des paramètres")

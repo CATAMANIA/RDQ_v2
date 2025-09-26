@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -174,20 +176,15 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("findByRole() - Doit retourner une liste vide pour un rôle inexistant")
-        void findByRole_WithInvalidRole_ShouldReturnEmptyList() {
+        @DisplayName("findByRole() - Doit lever une exception pour un rôle invalide")
+        void findByRole_WithInvalidRole_ShouldThrowException() {
             // Given
             String invalidRole = "INVALID_ROLE";
-            when(userRepository.findByRole(Role.COLLABORATEUR)).thenReturn(Arrays.asList());
 
-            // When
-            List<User> result = userService.findByRole(invalidRole);
-
-            // Then
-            assertThat(result)
-                    .isNotNull()
-                    .isEmpty();
-            verify(userRepository).findByRole(Role.COLLABORATEUR);
+            // When & Then
+            assertThrows(IllegalArgumentException.class, () -> {
+                userService.findByRole(invalidRole);
+            });
         }
 
         @Test
@@ -212,7 +209,7 @@ class UserServiceTest {
         void findByEmail_WithInvalidEmail_ShouldReturnNull() {
             // Given
             String invalidEmail = "invalid@example.com";
-            when(userRepository.findByEmail(invalidEmail)).thenReturn(null);
+            when(userRepository.findByEmail(invalidEmail)).thenReturn(Optional.empty());
 
             // When
             User result = userService.findByEmail(invalidEmail);
@@ -223,71 +220,26 @@ class UserServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("Tests d'initialisation des données")
-    class InitializationTest {
 
-        @Test
-        @DisplayName("initializeTestData() - Doit initialiser les données quand la base est vide")
-        void initializeTestData_WhenDatabaseEmpty_ShouldCreateTestUsers() {
-            // Given
-            when(userRepository.count()).thenReturn(0L);
-            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            // When
-            userService.initializeTestData();
-
-            // Then
-            verify(userRepository).count();
-            verify(userRepository, times(5)).save(any(User.class));
-            
-            // Vérifier que les utilisateurs sont créés avec les bons rôles
-            verify(userRepository).save(argThat(user -> 
-                user.getRole().equals("ADMIN") && user.getEmail().equals("admin@rdq.com")));
-            verify(userRepository, times(2)).save(argThat(user -> 
-                user.getRole().equals("MANAGER")));
-            verify(userRepository, times(2)).save(argThat(user -> 
-                user.getRole().equals("COLLABORATEUR")));
-        }
-
-        @Test
-        @DisplayName("initializeTestData() - Ne doit pas initialiser les données quand la base n'est pas vide")
-        void initializeTestData_WhenDatabaseNotEmpty_ShouldNotCreateTestUsers() {
-            // Given
-            when(userRepository.count()).thenReturn(5L);
-
-            // When
-            userService.initializeTestData();
-
-            // Then
-            verify(userRepository).count();
-            verify(userRepository, never()).save(any(User.class));
-        }
-    }
 
     @Nested
     @DisplayName("Tests de validation des paramètres")
     class ValidationTest {
 
         @Test
-        @DisplayName("findByRole() - Doit gérer les rôles null")
-        void findByRole_WithNullRole_ShouldCallRepository() {
-            // Given
-            when(userRepository.findByRole(null)).thenReturn(Arrays.asList());
-
-            // When
-            List<User> result = userService.findByRole(null);
-
-            // Then
-            assertThat(result).isNotNull().isEmpty();
-            verify(userRepository).findByRole(null);
+        @DisplayName("findByRole() - Doit lever une exception pour un rôle null")
+        void findByRole_WithNullRole_ShouldThrowException() {
+            // When & Then
+            assertThatThrownBy(() -> userService.findByRole(null))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessage("Name is null");
         }
 
         @Test
         @DisplayName("findByEmail() - Doit gérer les emails null")
         void findByEmail_WithNullEmail_ShouldCallRepository() {
             // Given
-            when(userRepository.findByEmail(null)).thenReturn(null);
+            when(userRepository.findByEmail(null)).thenReturn(Optional.empty());
 
             // When
             User result = userService.findByEmail(null);

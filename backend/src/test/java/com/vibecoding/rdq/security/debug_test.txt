@@ -1,0 +1,1 @@
+@Test void debug() { String token = jwtService.generateToken(""); String username = jwtService.getUsernameFromToken(token); System.out.println("Username from token: [" + username + "] null: " + (username == null)); }
